@@ -15,30 +15,29 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from vlad.core.filters import apply_filters
 from vlad.models import Oracle as OracleMeta
 from vlad.models import Plant
 from vlad.oracles import ORACLES
 
 
-def recommend(person, db: Session) -> dict[str, Any]:
+def recommend(person, db: Session, apply_filters_flag: bool = True) -> dict[str, Any]:
     """Главная функция: Person → пул растений-кандидатов с источниками.
+
+    Args:
+        person: SQLAlchemy Person (сохранённый или эфемерный).
+        db: SQLAlchemy session.
+        apply_filters_flag: если True (по умолчанию), пул прогоняется через
+            фильтры эксперта (USDA, sun, soil, дерево-враг, is_weed_like).
+            False — отдаём «сырой» пул, эксперт хочет видеть всё.
 
     Возвращает dict, готовый к JSON-сериализации:
         {
             "active_oracles": ["druid_tree", ...],
-            "pool": [
-                {
-                    "plant_slug": "willow",
-                    "plant_name_ru": "Ива",
-                    "plant_short_story": "Ива — артистическая натура...",
-                    "match_count": 1,
-                    "total_weight": 1.0,
-                    "sources": [
-                        {"oracle_id": "druid_tree", "oracle_name": "...",
-                         "weight": 1.0, "role": "main",
-                         "reason_for_expert": "...", "reason_for_client": "..."}
-                    ]
-                },
+            "pool": [...],            # см. PoolEntry в schemas/recommendation.py
+            "filters_applied": bool,
+            "excluded": [             # пусто, если filters_applied=false
+                {"plant_slug": "fig", "reason": "min USDA 7 > участка 4"},
                 ...
             ]
         }
@@ -100,7 +99,14 @@ def recommend(person, db: Session) -> dict[str, Any]:
         reverse=True,
     )
 
+    excluded: list[dict] = []
+    if apply_filters_flag:
+        sorted_pool, exclusions = apply_filters(sorted_pool, person, db)
+        excluded = [{"plant_slug": e.plant_slug, "reason": e.reason} for e in exclusions]
+
     return {
         "active_oracles": sorted(active_meta.keys()),
         "pool": sorted_pool,
+        "filters_applied": apply_filters_flag,
+        "excluded": excluded,
     }

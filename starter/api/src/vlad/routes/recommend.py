@@ -16,7 +16,15 @@ router = APIRouter()
 
 
 @router.post("/", response_model=RecommendOutput)
-def recommend(payload: RecommendInput, db: Session = Depends(get_db)):
+def recommend(
+    payload: RecommendInput,
+    apply_filters: bool = True,
+    db: Session = Depends(get_db),
+):
+    """Главный эндпоинт. По умолчанию пул фильтруется (USDA, sun, soil,
+    дерево-враг, is_weed_like). `?apply_filters=false` — эксперт смотрит «сырой»
+    пул со всем, что выпало по символическим системам.
+    """
     if payload.person_id is not None:
         person = db.get(Person, payload.person_id)
         if person is None:
@@ -26,5 +34,4 @@ def recommend(payload: RecommendInput, db: Session = Depends(get_db)):
         # к атрибутам объекта и читают из БД свои entries
         person = Person(**payload.person.model_dump(exclude_unset=False))
 
-    result = run_orchestrator(person, db)
-    return result
+    return run_orchestrator(person, db, apply_filters_flag=apply_filters)

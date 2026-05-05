@@ -17,14 +17,32 @@ def test_recommend_inline_pisces_intersection(seeded_client):
     assert {"willow", "fig"}.issubset(slugs)
 
 
-def test_recommend_by_person_id_taurus(seeded_client):
-    """25.04.1990, имя Анна:
+def test_recommend_by_person_id_taurus_unfiltered(seeded_client):
+    """25.04.1990, Анна — без фильтров (apply_filters=false):
     - druid_tree → грецкий орех (21.04–30.04)
     - zodiac     → яблоня (Телец)
     - numerology → берёза + рябина (Анна = 5)
-    - name       → нет (имя Анна в seeds отсутствует)
-    - eye_color  → нет (не задан)
+    Все четыре остаются.
     """
+    pid = seeded_client.post(
+        "/persons/",
+        json={"first_name": "Анна", "birth_date": "1990-04-25"},
+    ).json()["id"]
+
+    r = seeded_client.post(
+        "/recommend/?apply_filters=false",
+        json={"person_id": pid},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["filters_applied"] is False
+    slugs = {e["plant_slug"] for e in body["pool"]}
+    assert slugs == {"walnut", "apple", "birch", "rowan"}
+
+
+def test_recommend_by_person_id_taurus_filtered_drops_rowan(seeded_client):
+    """С фильтрами рябина (период 01–10.04) попадает в окно ±40 дней от 25.04
+    и отсеивается как «дерево-враг»; берёза (24.06) — нет, остаётся."""
     pid = seeded_client.post(
         "/persons/",
         json={"first_name": "Анна", "birth_date": "1990-04-25"},
@@ -32,9 +50,13 @@ def test_recommend_by_person_id_taurus(seeded_client):
 
     r = seeded_client.post("/recommend/", json={"person_id": pid})
     assert r.status_code == 200, r.text
-    pool = r.json()["pool"]
-    slugs = {e["plant_slug"] for e in pool}
-    assert slugs == {"walnut", "apple", "birch", "rowan"}
+    body = r.json()
+    assert body["filters_applied"] is True
+    slugs = {e["plant_slug"] for e in body["pool"]}
+    assert "rowan" not in slugs
+    assert {"walnut", "apple", "birch"}.issubset(slugs)
+    excluded = {x["plant_slug"] for x in body["excluded"]}
+    assert "rowan" in excluded
 
 
 def test_recommend_validates_either_or(seeded_client):

@@ -73,14 +73,15 @@ def test_full_intersection_for_eva_pisces_blue_eyes(seeded_session):
     - eye_color    → ива (голубые)
     - name         → яблоня (Ева — «жизнь» / древо познания)
 
-    Ожидаем ива с match_count=3 на первом месте.
+    Архитектурный «сырой» пул — без фильтров. Дуб попал бы в «дерево-враг»
+    (период 21.03 в окне ±40 дней от 05.03), это проверяется отдельно.
     """
     person = Person(
         first_name="Ева",
         birth_date="2000-03-05",
         eye_color="blue",
     )
-    out = recommend(person, seeded_session)
+    out = recommend(person, seeded_session, apply_filters_flag=False)
 
     pool = out["pool"]
     by_slug = {e["plant_slug"]: e for e in pool}
@@ -89,10 +90,25 @@ def test_full_intersection_for_eva_pisces_blue_eyes(seeded_session):
     willow_sources = {s["oracle_id"] for s in by_slug["willow"]["sources"]}
     assert willow_sources == {"druid_tree", "zodiac", "eye_color"}
 
-    # name → apple, numerology → oak, zodiac → fig
     assert "apple" in by_slug
     assert "oak" in by_slug
     assert "fig" in by_slug
 
-    # порядок: willow первая (match_count=3 наибольшее)
     assert pool[0]["plant_slug"] == "willow"
+    assert out["filters_applied"] is False
+    assert out["excluded"] == []
+
+
+def test_eva_with_filters_drops_enemy_oak(seeded_session):
+    """С фильтрами для Евы 05.03 дуб (21.03) выпадает как «дерево-враг»."""
+    person = Person(first_name="Ева", birth_date="2000-03-05", eye_color="blue")
+    out = recommend(person, seeded_session, apply_filters_flag=True)
+
+    slugs = {e["plant_slug"] for e in out["pool"]}
+    assert "willow" in slugs
+    assert "oak" not in slugs
+
+    excluded_slugs = {x["plant_slug"] for x in out["excluded"]}
+    assert "oak" in excluded_slugs
+    oak_reason = next(x["reason"] for x in out["excluded"] if x["plant_slug"] == "oak")
+    assert "враг" in oak_reason

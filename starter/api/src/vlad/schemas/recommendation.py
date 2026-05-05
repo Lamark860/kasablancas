@@ -30,6 +30,12 @@ class PoolEntry(BaseModel):
     match_count: int
     total_weight: float
     sources: list[OracleSource]
+    notes: list[str] = []   # пометки фильтров (например 'weed_like — вес снижен')
+
+
+class Exclusion(BaseModel):
+    plant_slug: str
+    reason: str
 
 
 class RecommendInput(BaseModel):
@@ -48,5 +54,7 @@ class RecommendInput(BaseModel):
 class RecommendOutput(BaseModel):
     active_oracles: list[str]
     pool: list[PoolEntry]
+    filters_applied: bool
+    excluded: list[Exclusion] = []
 
     model_config = ConfigDict(from_attributes=True)
