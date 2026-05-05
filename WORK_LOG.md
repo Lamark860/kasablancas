@@ -9,8 +9,8 @@
 ## Состояние на текущий момент
 
 - **Дата:** 2026-05-05
-- **Активный этап:** 3 завершён, переходим на 4 (натальная карта + zodiac)
-- **Что работает:** end-to-end через API — POST /persons → POST /recommend → пул растений с источниками. **50/50 pytest зелёные**.
+- **Активный этап:** 4 завершён, переходим на 5 (остальные оракулы)
+- **Что работает:** натальная карта через pyswisseph (Moshier), кеш в `natal_charts`, оракул `zodiac`, **реальные пересечения** (5.03.2000 → ива с match_count=2 от druid_tree+zodiac), геокодинг как best-effort при POST /persons. **80/80 pytest зелёные**.
 - **Блокеров:** нет
 
 ## Как проверить, в каком состоянии проект сейчас
@@ -18,16 +18,17 @@
 ```bash
 cd "/Users/maximlomaev/projects/Vlad rev1(1)/starter"
 docker compose ps                                                  # vlad-api, vlad-web в Up
-docker compose exec api pytest -q                                  # 50 passed
+docker compose exec api pytest -q                                  # 80 passed
 
-# end-to-end через живой API
+# пересечения вживую
 curl -s -X POST -H 'Content-Type: application/json' \
   -d '{"person":{"first_name":"X","birth_date":"2000-03-05"}}' \
   http://localhost:8100/recommend/ | python3 -m json.tool
-# pool[0].plant_slug = "willow", reason_for_client = "Ваше дерево — Ива..."
+# pool[0]: willow, match_count=2, sources=[druid_tree, zodiac]
+# pool[1]: fig,    match_count=1, sources=[zodiac]
 ```
 
-Вживую можно потыкать в Swagger: http://localhost:8100/docs — POST /persons, POST /recommend, GET /oracles, GET /plants.
+Swagger: http://localhost:8100/docs · Админка: http://localhost:8100/admin/ (после первого `/recommend` через id — увидишь кеш в `/admin/natal-chart/list`).
 
 ---
 
@@ -205,23 +206,77 @@ docker compose exec api pytest -q                        # 50 passed
 # и потом — http://localhost:8100/docs, потыкать в Swagger
 ```
 
-### Этап 4 — Натальная карта *(следующий)*
+### Этап 4 — Натальная карта + zodiac ✅
 
-См. `handoff/04-roadmap.md` → «Этап 4» и `handoff/05-natal-chart.md`.
+**Цель:** автоматический расчёт астропараметров → используется оракулом zodiac.
 
-**План:**
-1. Эфемериды Swiss Ephemeris в `api/ephe/` (скачать `.se1` файлы — несколько МБ).
-2. `natal/swisseph_wrapper.py` — расчёт sun/moon/asc + распределение планет
-   по стихиям, кеширует в `NatalChart`.
-3. `natal/geocode.py` — `birth_place` → `lat/lon/tz` через `geopy + timezonefinder`.
-4. При POST /persons (когда задано `birth_place`) — заполнять `birth_lat/lon/tz`.
-5. Оракул `oracles/zodiac.py` — берёт `chart.sun_sign` через `NatalChart`,
-   возвращает планетарные растения (по таблице из `research/04-zodiac-plants.md`).
-6. Сид `data/seed/zodiac.json`.
-7. Тесты: для известной даты+города → ожидаемый sun_sign (например 1990-03-05
-   Москва → pisces, потом проверить какие растения выпали).
+**Сделано:**
+- [x] `vlad/natal/swisseph_wrapper.py` — `calc_chart(birth_date, birth_time, lat, lon, tz)`
+  считает позиции 10 планет (Sun…Pluto), назначает знак по эклиптической долготе,
+  считает счётчики стихий fire/earth/air/water, асцендент через систему домов
+  Плацидус (только если есть time + lat + lon).
+- [x] `vlad/natal/cache.py` — `get_or_calc_chart(person, db)`. Для сохранённого
+  Person кеширует в таблицу `natal_charts`, для эфемерного — считает без записи.
+- [x] `vlad/natal/geocode.py` — best-effort через `geopy + timezonefinder`.
+  Сбой не блокирует POST /persons, эксперт может заполнить `birth_lat/lon/tz`
+  руками через `/admin`.
+- [x] `vlad/oracles/zodiac.py` — берёт `chart.sun_sign`, ищет в БД entries
+  с matcher=`{type:'zodiac_sign', sign:...}`. Зарегистрирован в `ORACLES`.
+- [x] `data/seed/zodiac.json` — 22 entries (только те растения, что есть в
+  `plants.json`; aries и часть дополнений из research/04 пока без записей).
+- [x] `POST /persons` — если задан `birth_place` и не заданы `birth_lat/lon`,
+  тихо подкачивает геокодом (с graceful-fallback на None при ошибках сети).
+- [x] **22 новых теста (всего 80/80):**
+  - `test_natal_chart.py` — sun_sign на 5 хорошо изученных дат, асцендент с
+    временем+местом, кеширование (повторный вызов не пишет вторую строку).
+  - `test_oracle_zodiac.py` — параметризованный по 11 ключевым датам
+    (taurus→apple, cancer→willow/ash, leo→oak/cedar, libra→maple/beech,
+    sagittarius→rowan/hornbeam/cedar, capricorn→pine), валидность всех
+    sign'ов и plant_slug'ов в JSON, наличие в registry.
+  - `test_intersections.py` — главный тест архитектуры: 5.03 → willow с
+    match_count=2 от druid_tree+zodiac впереди инжира; 25.04 → walnut+apple
+    без пересечения; выключение druid через `active=0` оставляет только zodiac.
 
-### Этапы 5–10 *(не начаты)*
+**Заметки и компромиссы:**
+- **Используются Moshier-эфемериды** (`swe.FLG_MOSEPH`), без `.se1` файлов.
+  Точность ~3 угловых секунды — с большим запасом для назначения знаков.
+  Если позже потребуются прогрессии или близкие аспекты — положим эфемериды
+  в `api/ephe/` и снимем флаг.
+- Без `birth_time` берём 12:00 UTC. Sun и медленные планеты от этого почти
+  не зависят, но Луна на стыке знаков может ошибиться (документировано в
+  handoff/05). UI этапа 7 должен предупреждать об этом.
+- Геокодинг — сетевой запрос к Nominatim (OSM). При сбое (нет интернета,
+  лимит, неизвестное место) Person сохраняется без `birth_lat/lon/tz` —
+  это намеренно, не блокирует поток.
+- Zodiac покрывает не все знаки и не все растения из `research/04`. Aries
+  пуст (барбарис, боярышник, лиственница и т.п. не входят в наши 22
+  растения). Цветы и травы тоже отсутствуют. Когда расширим `plants.json` —
+  добавим entries без переписывания оракула.
+- При POST /recommend через `person_id` оракул автоматически кеширует
+  `NatalChart` для этого person; видно в `/admin/natal-chart/list`.
+
+**Как продолжить с нуля:**
+```bash
+cd "/Users/maximlomaev/projects/Vlad rev1(1)/starter"
+docker compose up -d
+docker compose exec api python -m vlad.seed             # +zodiac.json (22)
+docker compose exec api pytest -q                       # 80 passed
+```
+
+### Этап 5 — Остальные оракулы *(следующий)*
+
+См. `handoff/04-roadmap.md` → «Этап 5». По одному оракулу за подход:
+1. `druid_flower` — цветочный гороскоп друидов (research/03).
+2. `slavic` — славянский древесный гороскоп (research/05).
+3. `name` — растение по имени (research/06).
+4. `eye_color` — авторская привязка через стихию (research/07).
+5. `lunar` — лунный день рождения (research/07).
+6. `numerology` — число имени по Пифагору → стихия (research/07).
+
+Для каждого: data/seed/<id>.json + класс-наследник Oracle + регистрация +
+тест с известным «золотым» примером.
+
+### Этапы 6–10 *(не начаты)*
 
 Полный план — в `handoff/04-roadmap.md`.
 

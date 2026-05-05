@@ -1,0 +1,34 @@
+[
+  { "matcher": {"type": "zodiac_sign", "sign": "taurus"},      "plant_slug": "apple",    "role": "main", "weight": 1.0, "reason_for_expert": "Зодиак: Телец (Земля, Венера) — яблоня",                                  "reason_for_client": "Под Тельцом расцветает Яблоня — древо Венеры, мягкого тепла и плодородия." },
+
+  { "matcher": {"type": "zodiac_sign", "sign": "gemini"},      "plant_slug": "hazel",    "role": "main", "weight": 1.0, "reason_for_expert": "Зодиак: Близнецы (Воздух, Меркурий) — орешник",                          "reason_for_client": "Близнецам близок Орешник — символ быстрой мысли и подвижного ума." },
+  { "matcher": {"type": "zodiac_sign", "sign": "gemini"},      "plant_slug": "jasmine",  "role": "companion", "weight": 0.8, "reason_for_expert": "Зодиак: Близнецы — жасмин (чубушник)",                                "reason_for_client": "К Близнецам тянется Жасмин — лёгкий аромат и общительный характер." },
+
+  { "matcher": {"type": "zodiac_sign", "sign": "cancer"},      "plant_slug": "willow",   "role": "main", "weight": 1.0, "reason_for_expert": "Зодиак: Рак (Вода, Луна) — ива (плакучая)",                              "reason_for_client": "Раку родственна Ива — лунное дерево чувствительности и поэтической натуры." },
+  { "matcher": {"type": "zodiac_sign", "sign": "cancer"},      "plant_slug": "ash",      "role": "main", "weight": 1.0, "reason_for_expert": "Зодиак: Рак — ясень",                                                    "reason_for_client": "Раку также покровительствует Ясень — связь миров и надёжность." },
+  { "matcher": {"type": "zodiac_sign", "sign": "cancer"},      "plant_slug": "oak",      "role": "companion", "weight": 0.7, "reason_for_expert": "Зодиак: Рак — дуб (по Раку, в дополнение к Льву)",                       "reason_for_client": "Дуб для Рака — опора рода, дом, защита." },
+  { "matcher": {"type": "zodiac_sign", "sign": "cancer"},      "plant_slug": "cypress",  "role": "main", "weight": 1.0, "reason_for_expert": "Зодиак: Рак — кипарис (южанин, замена — туя/можжевельник)",              "reason_for_client": "Кипарис для Рака — образ домашней верности." },
+
+  { "matcher": {"type": "zodiac_sign", "sign": "leo"},         "plant_slug": "oak",      "role": "main", "weight": 1.0, "reason_for_expert": "Зодиак: Лев (Огонь, Солнце) — дуб",                                       "reason_for_client": "Льву по природе Дуб — солнечная сила и царственная стать." },
+  { "matcher": {"type": "zodiac_sign", "sign": "leo"},         "plant_slug": "cedar",    "role": "main", "weight": 1.0, "reason_for_expert": "Зодиак: Лев — кедр",                                                      "reason_for_client": "Кедр для Льва — благородство и долгая родовая память." },
+
+  { "matcher": {"type": "zodiac_sign", "sign": "virgo"},       "plant_slug": "hazel",    "role": "main", "weight": 1.0, "reason_for_expert": "Зодиак: Дева (Земля, Меркурий) — лещина",                                "reason_for_client": "Деве близка Лещина — тонкая мысль и аккуратность." },
+
+  { "matcher": {"type": "zodiac_sign", "sign": "libra"},       "plant_slug": "maple",    "role": "main", "weight": 1.0, "reason_for_expert": "Зодиак: Весы (Воздух, Венера) — клён",                                   "reason_for_client": "Весам родственен Клён — щедрость осенних красок и доброта без надрыва." },
+  { "matcher": {"type": "zodiac_sign", "sign": "libra"},       "plant_slug": "beech",    "role": "main", "weight": 1.0, "reason_for_expert": "Зодиак: Весы — бук",                                                      "reason_for_client": "Бук для Весов — гармония и спокойная власть." },
+
+  { "matcher": {"type": "zodiac_sign", "sign": "scorpio"},     "plant_slug": "rowan",    "role": "main", "weight": 1.0, "reason_for_expert": "Зодиак: Скорпион (Вода, Плутон/Марс) — рябина",                          "reason_for_client": "Скорпиону близка Рябина — алый акцент и тонкое чувство тайн." },
+  { "matcher": {"type": "zodiac_sign", "sign": "scorpio"},     "plant_slug": "chestnut", "role": "main", "weight": 1.0, "reason_for_expert": "Зодиак: Скорпион — каштан",                                              "reason_for_client": "Каштан для Скорпиона — глубина и тёплая забота." },
+
+  { "matcher": {"type": "zodiac_sign", "sign": "sagittarius"}, "plant_slug": "rowan",    "role": "main", "weight": 1.0, "reason_for_expert": "Зодиак: Стрелец (Огонь, Юпитер) — рябина",                              "reason_for_client": "Стрельцу родственна Рябина — яркость и ясный взгляд вдаль." },
+  { "matcher": {"type": "zodiac_sign", "sign": "sagittarius"}, "plant_slug": "hornbeam", "role": "main", "weight": 1.0, "reason_for_expert": "Зодиак: Стрелец — граб",                                                  "reason_for_client": "Граб для Стрельца — точная красота и эстетический вкус." },
+  { "matcher": {"type": "zodiac_sign", "sign": "sagittarius"}, "plant_slug": "cedar",    "role": "main", "weight": 1.0, "reason_for_expert": "Зодиак: Стрелец — кедр",                                                  "reason_for_client": "Кедр для Стрельца — мудрость и долгий путь." },
+
+  { "matcher": {"type": "zodiac_sign", "sign": "capricorn"},   "plant_slug": "pine",     "role": "main", "weight": 1.0, "reason_for_expert": "Зодиак: Козерог (Земля, Сатурн) — сосна",                                "reason_for_client": "Козерогу близка Сосна — прямота, выдержка, строгость линий." },
+
+  { "matcher": {"type": "zodiac_sign", "sign": "aquarius"},    "plant_slug": "poplar",   "role": "main", "weight": 1.0, "reason_for_expert": "Зодиак: Водолей (Воздух, Уран/Сатурн) — тополь",                          "reason_for_client": "Водолею родственен Тополь — внутренний разговор, поиск своего пути." },
+  { "matcher": {"type": "zodiac_sign", "sign": "aquarius"},    "plant_slug": "rowan",    "role": "companion", "weight": 0.8, "reason_for_expert": "Зодиак: Водолей — рябина",                                              "reason_for_client": "Рябина для Водолея — необычная красота и независимость." },
+
+  { "matcher": {"type": "zodiac_sign", "sign": "pisces"},      "plant_slug": "willow",   "role": "main", "weight": 1.0, "reason_for_expert": "Зодиак: Рыбы (Вода, Нептун/Юпитер) — ива",                              "reason_for_client": "Рыбам родственна Ива — мечтательная плакучесть и любовь к воде." },
+  { "matcher": {"type": "zodiac_sign", "sign": "pisces"},      "plant_slug": "fig",      "role": "main", "weight": 1.0, "reason_for_expert": "Зодиак: Рыбы — инжир (южанин, замена — облепиха/ирга)",                  "reason_for_client": "Инжир для Рыб — утончённость и любовь к уюту." }
+]

@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from vlad.db import get_db
 from vlad.models import Person
+from vlad.natal.geocode import geocode_place
 from vlad.schemas.person import PersonCreate, PersonOut
 
 router = APIRouter()
@@ -17,7 +18,16 @@ def list_persons(db: Session = Depends(get_db)):
 
 @router.post("/", response_model=PersonOut, status_code=status.HTTP_201_CREATED)
 def create_person(payload: PersonCreate, db: Session = Depends(get_db)):
-    person = Person(**payload.model_dump(exclude_unset=False))
+    data = payload.model_dump(exclude_unset=False)
+    # best-effort геокодирование: если задано birth_place и lat/lon ещё пусты
+    if data.get("birth_place") and data.get("birth_lat") is None and data.get("birth_lon") is None:
+        geo = geocode_place(data["birth_place"])
+        if geo is not None:
+            data["birth_lat"] = geo.lat
+            data["birth_lon"] = geo.lon
+            if data.get("birth_tz") is None:
+                data["birth_tz"] = geo.tz
+    person = Person(**data)
     db.add(person)
     db.commit()
     db.refresh(person)
