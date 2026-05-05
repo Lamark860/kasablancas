@@ -1,0 +1,14 @@
+[
+  { "matcher": {"type": "name_match", "name": "Ива"},     "plant_slug": "willow",  "role": "main", "weight": 1.0, "reason_for_expert": "Имя Ива — буквально «ива»",                              "reason_for_client": "Ваше имя — это сразу дерево. Ива." },
+  { "matcher": {"type": "name_match", "name": "Иванна"},  "plant_slug": "willow",  "role": "companion", "weight": 0.7, "reason_for_expert": "Имя Иванна — родственно Иве",                         "reason_for_client": "Ваше имя восходит к иве — дереву поэтической натуры." },
+
+  { "matcher": {"type": "name_match", "name": "Ясмина"},  "plant_slug": "jasmine", "role": "main", "weight": 1.0, "reason_for_expert": "Имя Ясмина / Ясмин — буквально «жасмин»",              "reason_for_client": "Ваше имя — это жасмин, аромат тёплого вечера." },
+  { "matcher": {"type": "name_match", "name": "Жасмин"},  "plant_slug": "jasmine", "role": "main", "weight": 1.0, "reason_for_expert": "Имя Жасмин — жасмин",                                    "reason_for_client": "Ваше имя — жасмин." },
+  { "matcher": {"type": "name_match", "name": "Ясмин"},   "plant_slug": "jasmine", "role": "main", "weight": 1.0, "reason_for_expert": "Имя Ясмин — жасмин",                                     "reason_for_client": "Ваше имя — жасмин." },
+
+  { "matcher": {"type": "name_match", "name": "Дарья"},   "plant_slug": "oak",     "role": "main", "weight": 0.9, "reason_for_expert": "Имя Дарья — «сильная» (research/06: дуб, ясень)",       "reason_for_client": "Имя Дарья означает «сильная» — Дуб ваше дерево." },
+  { "matcher": {"type": "name_match", "name": "Дарья"},   "plant_slug": "ash",     "role": "companion", "weight": 0.7, "reason_for_expert": "Имя Дарья — также ясень",                              "reason_for_client": "Дарье близок и Ясень — прямой реалист." },
+  { "matcher": {"type": "name_match", "name": "Дарина"},  "plant_slug": "oak",     "role": "main", "weight": 0.9, "reason_for_expert": "Имя Дарина — «сильная»",                                  "reason_for_client": "Имя Дарина даёт силу — Дуб ваше дерево." },
+
+  { "matcher": {"type": "name_match", "name": "Ева"},     "plant_slug": "apple",   "role": "main", "weight": 1.0, "reason_for_expert": "Имя Ева — «жизнь»; через «древо познания» — яблоня",     "reason_for_client": "Ваше имя — Ева. Древо познания, древо жизни — Яблоня." }
+]

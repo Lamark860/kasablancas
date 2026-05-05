@@ -9,26 +9,27 @@
 ## Состояние на текущий момент
 
 - **Дата:** 2026-05-05
-- **Активный этап:** 4 завершён, переходим на 5 (остальные оракулы)
-- **Что работает:** натальная карта через pyswisseph (Moshier), кеш в `natal_charts`, оракул `zodiac`, **реальные пересечения** (5.03.2000 → ива с match_count=2 от druid_tree+zodiac), геокодинг как best-effort при POST /persons. **80/80 pytest зелёные**.
+- **Активный этап:** 5 завершён частично (5 из 8 оракулов), переходим на 6 (фильтры эксперта). 3 оракула отложены до расширения `plants.json` — см. DECISIONS.md §18.
+- **Что работает:** 5 оракулов (`druid_tree`, `zodiac`, `numerology`, `eye_color`, `name`), реальные пересечения по 3 системам одновременно (Ева, 5.03.2000, голубые глаза → ива от druid_tree+zodiac+eye_color). **105/105 pytest зелёные**.
 - **Блокеров:** нет
 
 ## Как проверить, в каком состоянии проект сейчас
 
 ```bash
 cd "/Users/maximlomaev/projects/Vlad rev1(1)/starter"
-docker compose ps                                                  # vlad-api, vlad-web в Up
-docker compose exec api pytest -q                                  # 80 passed
+docker compose exec api pytest -q                                  # 105 passed
 
-# пересечения вживую
+# главная демонстрация: пересечения 3 оракулов на одном растении
 curl -s -X POST -H 'Content-Type: application/json' \
-  -d '{"person":{"first_name":"X","birth_date":"2000-03-05"}}' \
+  -d '{"person":{"first_name":"Ева","birth_date":"2000-03-05","eye_color":"blue"}}' \
   http://localhost:8100/recommend/ | python3 -m json.tool
-# pool[0]: willow, match_count=2, sources=[druid_tree, zodiac]
-# pool[1]: fig,    match_count=1, sources=[zodiac]
+# willow matches=3 sources=[druid_tree, zodiac, eye_color]
+# fig    matches=1 sources=[zodiac]
+# apple  matches=1 sources=[name]
+# oak    matches=1 sources=[numerology]
 ```
 
-Swagger: http://localhost:8100/docs · Админка: http://localhost:8100/admin/ (после первого `/recommend` через id — увидишь кеш в `/admin/natal-chart/list`).
+Swagger: http://localhost:8100/docs · Админка: http://localhost:8100/admin/ — в `/admin/oracle-entry/list` теперь 94 строки (40 druid + 22 zodiac + 15 numerology + 9 name + 8 eye_color).
 
 ---
 
@@ -263,20 +264,65 @@ docker compose exec api python -m vlad.seed             # +zodiac.json (22)
 docker compose exec api pytest -q                       # 80 passed
 ```
 
-### Этап 5 — Остальные оракулы *(следующий)*
+### Этап 5 — Остальные оракулы ⚠️ частично
 
-См. `handoff/04-roadmap.md` → «Этап 5». По одному оракулу за подход:
-1. `druid_flower` — цветочный гороскоп друидов (research/03).
-2. `slavic` — славянский древесный гороскоп (research/05).
-3. `name` — растение по имени (research/06).
-4. `eye_color` — авторская привязка через стихию (research/07).
-5. `lunar` — лунный день рождения (research/07).
-6. `numerology` — число имени по Пифагору → стихия (research/07).
+**Цель:** все 8 оракулов из MVP-набора работают.
 
-Для каждого: data/seed/<id>.json + класс-наследник Oracle + регистрация +
-тест с известным «золотым» примером.
+**Сделано (3 оракула + расширены тесты):**
+- [x] `oracles/numerology.py` + `data/seed/numerology.json` — 15 entries по
+  таблице из `research/07`. Считает число имени по Пифагору в кириллице
+  (helper `name_number`), редуцирует до 1..9.
+- [x] `oracles/eye_color.py` + `data/seed/eye-color.json` — 8 entries по
+  `research/07`. Покрыты blue/grey/brown/hazel/amber.
+- [x] `oracles/name.py` + `data/seed/name.json` — 9 entries по `research/06`
+  (этимологический подход A). Сравнение case-insensitive по `first_name`.
+- [x] Все три зарегистрированы в `oracles/__init__.py`.
+- [x] **+25 тестов (всего 105/105):**
+  - `test_oracle_numerology.py` — параметризованный по 5 именам, edge-cases.
+  - `test_oracle_eye_color.py` — параметризованный по 5 цветам.
+  - `test_oracle_name.py` — case-insensitive, неизвестное имя, два plant'а
+    для одного имени (Дарья → oak+ash).
+  - `test_intersections.py` дополнен главным демонстрационным тестом этапа:
+    Ева, 5.03.2000, голубые глаза → ива с match_count=3 от 3 оракулов.
 
-### Этапы 6–10 *(не начаты)*
+**Отложено (3 оракула, см. DECISIONS.md §18):**
+- ⏸ `druid_flower` — нужны 36 цветов/трав в `plants.json` (mak, лилия,
+  ромашка, наперстянка…), расширение справочника требует эксперта.
+- ⏸ `slavic` — research/05 сам неполный, нужен канонический источник.
+- ⏸ `lunar` — research/07 пишет «источники не очень устойчивы», требует
+  расчёта лунного дня через pyswisseph.
+
+**Заметки и компромиссы:**
+- §16: eye_color и numerology покрывают только наши 22 растения; «зелёные»,
+  «чёрные» глаза и число 7 — без полного покрытия.
+- §17: name-оракул — стартовая выборка из 9 имён, расширяется по факту
+  обращений клиентов (как и предлагает research/06).
+
+**Как продолжить с нуля:**
+```bash
+cd "/Users/maximlomaev/projects/Vlad rev1(1)/starter"
+docker compose up -d
+docker compose exec api python -m vlad.seed   # 5 оракулов поднимут entries
+docker compose exec api pytest -q             # 105 passed
+```
+
+### Этап 6 — Фильтры эксперта *(следующий)*
+
+См. `handoff/04-roadmap.md` → «Этап 6».
+
+**План:**
+1. `core/filters.py`:
+   - фильтр по `min_zone_usda` (Person.garden_zone_usda)
+   - фильтр по `garden_sun` (солнце/тень)
+   - фильтр по `garden_soil` (влажность)
+   - «дерево-враг»: 40 дней до/после дня рождения исключаются из пула
+   - флаг `is_weed_like` — не выкидывать, но понижать вес
+2. Параметр `?apply_filters=true|false` у `POST /recommend` — эксперт может
+   посмотреть пул и без них.
+3. Тесты: для южного клиента в зоне 7 не выпадает пихта; для тенистого —
+   не выпадают розы и т.п.
+
+### Этапы 7–10 *(не начаты)*
 
 Полный план — в `handoff/04-roadmap.md`.
 

@@ -18,7 +18,13 @@ def test_recommend_inline_pisces_intersection(seeded_client):
 
 
 def test_recommend_by_person_id_taurus(seeded_client):
-    """25.04.1990: druid_tree → грецкий орех, zodiac → яблоня (без пересечения)."""
+    """25.04.1990, имя Анна:
+    - druid_tree → грецкий орех (21.04–30.04)
+    - zodiac     → яблоня (Телец)
+    - numerology → берёза + рябина (Анна = 5)
+    - name       → нет (имя Анна в seeds отсутствует)
+    - eye_color  → нет (не задан)
+    """
     pid = seeded_client.post(
         "/persons/",
         json={"first_name": "Анна", "birth_date": "1990-04-25"},
@@ -28,7 +34,7 @@ def test_recommend_by_person_id_taurus(seeded_client):
     assert r.status_code == 200, r.text
     pool = r.json()["pool"]
     slugs = {e["plant_slug"] for e in pool}
-    assert {"walnut", "apple"} == slugs
+    assert slugs == {"walnut", "apple", "birch", "rowan"}
 
 
 def test_recommend_validates_either_or(seeded_client):

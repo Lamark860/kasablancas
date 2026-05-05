@@ -1,0 +1,13 @@
+[
+  { "matcher": {"type": "eye_color", "color": "blue"},  "plant_slug": "willow",   "role": "main", "weight": 0.9, "reason_for_expert": "Цвет глаз: голубые → ива (стихия воды)", "reason_for_client": "У вас голубые глаза — ваше дерево связано с водой. Ива." },
+  { "matcher": {"type": "eye_color", "color": "grey"},  "plant_slug": "willow",   "role": "main", "weight": 0.8, "reason_for_expert": "Цвет глаз: серые → ива (серебристая, как замена)", "reason_for_client": "У вас серые глаза — серебристая Ива." },
+
+  { "matcher": {"type": "eye_color", "color": "brown"}, "plant_slug": "oak",      "role": "main", "weight": 1.0, "reason_for_expert": "Цвет глаз: карие → дуб (земля, теплота)",  "reason_for_client": "У вас карие глаза — ваше дерево земляное и тёплое. Дуб." },
+  { "matcher": {"type": "eye_color", "color": "brown"}, "plant_slug": "walnut",   "role": "companion", "weight": 0.9, "reason_for_expert": "Цвет глаз: карие → орех",                  "reason_for_client": "К карим глазам также подходит Орех — спокойная сила и теплота." },
+  { "matcher": {"type": "eye_color", "color": "brown"}, "plant_slug": "chestnut", "role": "companion", "weight": 0.9, "reason_for_expert": "Цвет глаз: карие → каштан",                "reason_for_client": "Каштан — ещё одно тёплое дерево для карих глаз." },
+  { "matcher": {"type": "eye_color", "color": "brown"}, "plant_slug": "rowan",    "role": "companion", "weight": 0.8, "reason_for_expert": "Цвет глаз: карие → рябина",                "reason_for_client": "Рябина — алый акцент в палитре карих." },
+
+  { "matcher": {"type": "eye_color", "color": "hazel"}, "plant_slug": "hazel",    "role": "main", "weight": 1.0, "reason_for_expert": "Цвет глаз: ореховые → лещина (по этимологии)", "reason_for_client": "У вас ореховые глаза — Лещина (орешник)." },
+
+  { "matcher": {"type": "eye_color", "color": "amber"}, "plant_slug": "linden",   "role": "main", "weight": 0.7, "reason_for_expert": "Цвет глаз: янтарные → липа (медоносная, солнечная)", "reason_for_client": "У вас янтарные глаза — Липа, медоносное дерево солнца." }
+]

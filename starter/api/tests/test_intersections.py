@@ -60,4 +60,39 @@ def test_disabling_druid_keeps_zodiac(seeded_session):
     assert "zodiac" in out["active_oracles"]
 
     sources_in_pool = {s["oracle_id"] for e in out["pool"] for s in e["sources"]}
-    assert sources_in_pool == {"zodiac"}
+    assert "zodiac" in sources_in_pool
+
+
+def test_full_intersection_for_eva_pisces_blue_eyes(seeded_session):
+    """Пять оракулов одновременно — главный демонстрационный кейс этапа 5.
+
+    Ева, родилась 05.03.2000 (Рыбы, период Ивы), голубые глаза:
+    - druid_tree   → ива
+    - zodiac       → ива + инжир (Рыбы)
+    - numerology   → дуб (Ева=1 по Пифагору)
+    - eye_color    → ива (голубые)
+    - name         → яблоня (Ева — «жизнь» / древо познания)
+
+    Ожидаем ива с match_count=3 на первом месте.
+    """
+    person = Person(
+        first_name="Ева",
+        birth_date="2000-03-05",
+        eye_color="blue",
+    )
+    out = recommend(person, seeded_session)
+
+    pool = out["pool"]
+    by_slug = {e["plant_slug"]: e for e in pool}
+
+    assert by_slug["willow"]["match_count"] == 3
+    willow_sources = {s["oracle_id"] for s in by_slug["willow"]["sources"]}
+    assert willow_sources == {"druid_tree", "zodiac", "eye_color"}
+
+    # name → apple, numerology → oak, zodiac → fig
+    assert "apple" in by_slug
+    assert "oak" in by_slug
+    assert "fig" in by_slug
+
+    # порядок: willow первая (match_count=3 наибольшее)
+    assert pool[0]["plant_slug"] == "willow"

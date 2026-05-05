@@ -11,12 +11,18 @@
 """
 from .base import Oracle, OracleResult
 from .druid_tree import DruidTreeOracle
+from .eye_color import EyeColorOracle
+from .name import NameOracle
+from .numerology import NumerologyOracle
 from .zodiac import ZodiacOracle
 
 
 ORACLES: dict[str, Oracle] = {
     DruidTreeOracle.id: DruidTreeOracle(),
     ZodiacOracle.id: ZodiacOracle(),
+    NumerologyOracle.id: NumerologyOracle(),
+    EyeColorOracle.id: EyeColorOracle(),
+    NameOracle.id: NameOracle(),
 }
 
 __all__ = ["Oracle", "OracleResult", "ORACLES"]

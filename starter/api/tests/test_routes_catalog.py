@@ -16,9 +16,10 @@ def test_list_oracles_marks_implemented(seeded_client):
     rows = r.json()
     assert len(rows) == 8
     by_id = {o["id"]: o for o in rows}
-    assert by_id["druid_tree"]["implemented"] is True
-    assert by_id["zodiac"]["implemented"] is True
-    # ещё не реализованные на этапе 4
-    assert by_id["druid_flower"]["implemented"] is False
-    assert by_id["slavic"]["implemented"] is False
+    # реализовано (5)
+    for o in ("druid_tree", "zodiac", "numerology", "eye_color", "name"):
+        assert by_id[o]["implemented"] is True, o
+    # отложено до расширения plants.json (3) — см. DECISIONS.md §16-18
+    for o in ("druid_flower", "slavic", "lunar"):
+        assert by_id[o]["implemented"] is False, o
     assert by_id["druid_tree"]["required_inputs"] == ["birth_date"]

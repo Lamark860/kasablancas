@@ -1,0 +1,25 @@
+[
+  { "matcher": {"type": "name_pythagorean_number", "number": 1}, "plant_slug": "oak",      "role": "main", "weight": 1.0, "reason_for_expert": "Нумерология имени: 1 (лидер) — дуб",                          "reason_for_client": "Число вашего имени — 1, дерево лидеров. Дуб." },
+
+  { "matcher": {"type": "name_pythagorean_number", "number": 2}, "plant_slug": "apple",    "role": "main", "weight": 1.0, "reason_for_expert": "Нумерология имени: 2 (пара) — яблоня",                         "reason_for_client": "Число вашего имени — 2, парное число. Яблоня — дерево пары и тёплого дома." },
+
+  { "matcher": {"type": "name_pythagorean_number", "number": 3}, "plant_slug": "maple",    "role": "main", "weight": 1.0, "reason_for_expert": "Нумерология имени: 3 (творчество) — клён",                     "reason_for_client": "Число вашего имени — 3, число творчества. Клён — щедрый художник осени." },
+  { "matcher": {"type": "name_pythagorean_number", "number": 3}, "plant_slug": "willow",   "role": "companion", "weight": 0.8, "reason_for_expert": "Нумерология имени: 3 — ива (творчество, чувствительность)",      "reason_for_client": "К числу 3 также тянется Ива — поэтическая натура." },
+
+  { "matcher": {"type": "name_pythagorean_number", "number": 4}, "plant_slug": "pine",     "role": "main", "weight": 1.0, "reason_for_expert": "Нумерология имени: 4 (стабильность) — сосна",                    "reason_for_client": "Число вашего имени — 4, число опоры. Сосна — прямая, надёжная." },
+  { "matcher": {"type": "name_pythagorean_number", "number": 4}, "plant_slug": "beech",    "role": "main", "weight": 1.0, "reason_for_expert": "Нумерология имени: 4 — бук",                                      "reason_for_client": "К числу 4 также Бук — точность и спокойная сила." },
+  { "matcher": {"type": "name_pythagorean_number", "number": 4}, "plant_slug": "fir",      "role": "companion", "weight": 0.7, "reason_for_expert": "Нумерология имени: 4 — пихта (как замена ели в research/07)",       "reason_for_client": "Пихта подходит числу 4 — стойкость зимних истин." },
+
+  { "matcher": {"type": "name_pythagorean_number", "number": 5}, "plant_slug": "birch",    "role": "main", "weight": 1.0, "reason_for_expert": "Нумерология имени: 5 (свобода) — берёза",                       "reason_for_client": "Число вашего имени — 5, число свободы. Берёза — открытое и лёгкое дерево." },
+  { "matcher": {"type": "name_pythagorean_number", "number": 5}, "plant_slug": "rowan",    "role": "main", "weight": 1.0, "reason_for_expert": "Нумерология имени: 5 — рябина",                                   "reason_for_client": "К числу 5 также Рябина — алый акцент, тонкий вкус." },
+
+  { "matcher": {"type": "name_pythagorean_number", "number": 6}, "plant_slug": "linden",   "role": "main", "weight": 1.0, "reason_for_expert": "Нумерология имени: 6 (гармония) — липа",                         "reason_for_client": "Число вашего имени — 6, число гармонии. Липа — мягкое сердце и материнская мудрость." },
+
+  { "matcher": {"type": "name_pythagorean_number", "number": 7}, "plant_slug": "cypress",  "role": "main", "weight": 0.9, "reason_for_expert": "Нумерология имени: 7 (мистика) — кипарис как замена тиса/можжевельника", "reason_for_client": "Число вашего имени — 7, число тайны. Кипарис — страж памяти." },
+
+  { "matcher": {"type": "name_pythagorean_number", "number": 8}, "plant_slug": "walnut",   "role": "main", "weight": 1.0, "reason_for_expert": "Нумерология имени: 8 (материя) — орех",                          "reason_for_client": "Число вашего имени — 8, число материи. Орех — неспешная сила и тенистая прохлада." },
+  { "matcher": {"type": "name_pythagorean_number", "number": 8}, "plant_slug": "chestnut", "role": "main", "weight": 1.0, "reason_for_expert": "Нумерология имени: 8 — каштан",                                   "reason_for_client": "К числу 8 также Каштан — забота о близких." },
+
+  { "matcher": {"type": "name_pythagorean_number", "number": 9}, "plant_slug": "cedar",    "role": "main", "weight": 1.0, "reason_for_expert": "Нумерология имени: 9 (мудрость) — кедр",                         "reason_for_client": "Число вашего имени — 9, число мудрости. Кедр — древняя сила и долгая память." },
+  { "matcher": {"type": "name_pythagorean_number", "number": 9}, "plant_slug": "cypress",  "role": "companion", "weight": 0.8, "reason_for_expert": "Нумерология имени: 9 — кипарис",                                 "reason_for_client": "К числу 9 также Кипарис — постоянство и зрелое равновесие." }
+]
