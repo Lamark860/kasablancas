@@ -1,0 +1,225 @@
+/* Викторианский гримуар — токены из victorian-styles.jsx (VS-объект). */
+
+:root {
+  --paper:        #ede0c4;
+  --paper-deep:   #dccfae;
+  --paper-shadow: #c0b48f;
+
+  --ink:          #221a10;
+  --ink-soft:     #4e3f2a;
+  --ink-faded:    #7a6a4a;
+  --rule:         #a8966a;
+
+  --cover-ink:       #1a120b;
+  --cover-deep:      #2a1a0e;
+  --cover-gold:      #b89254;
+  --cover-gold-soft: #8a6a3c;
+
+  --terra:      #9a3a1f;
+  --terra-soft: #b85a3a;
+  --rose:       #c47a76;
+  --leaf:       #5a6a3a;
+
+  --display: 'UnifrakturCook', 'IM Fell English SC', serif;
+  --serif:   'IM Fell English', 'EB Garamond', 'Cormorant Garamond', Georgia, serif;
+  --sans:    'IBM Plex Mono', ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--serif);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: var(--cover-gold); color: var(--cover-ink); }
+
+a { color: var(--terra); text-decoration: none; border-bottom: 1px dotted var(--terra); }
+a:hover { color: var(--ink); border-bottom-color: var(--ink); }
+
+button { font-family: inherit; }
+
+/* ── базовые типографические утилиты ── */
+.v-display      { font-family: var(--display); font-weight: 400; line-height: 1; }
+.v-serif        { font-family: var(--serif); }
+.v-italic       { font-style: italic; }
+.v-mono         { font-family: var(--sans); font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; }
+.v-mono-tight   { font-family: var(--sans); font-weight: 500; letter-spacing: 0.32em; text-transform: uppercase; font-size: 9px; }
+.v-mono-eyebrow { font-family: var(--sans); font-weight: 500; letter-spacing: 0.36em; text-transform: uppercase; font-size: 9px; color: var(--terra); }
+
+/* ── каркас викторианского листа: двойная рамка ── */
+.v-sheet {
+  position: relative;
+  background: var(--paper);
+  padding: 18px;
+  box-shadow: 0 20px 60px rgba(40, 30, 10, 0.3);
+}
+.v-sheet--cover {
+  background: var(--cover-ink);
+  color: var(--cover-gold);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+}
+.v-frame {
+  position: relative;
+  padding: 28px 32px;
+  border: 1.5px solid var(--ink-soft);
+  outline: 0.5px solid var(--ink-soft);
+  outline-offset: 8px;
+}
+.v-sheet--cover .v-frame {
+  border-color: var(--cover-gold);
+  outline-color: var(--cover-gold);
+}
+
+/* ── разделитель «виньетка» ── */
+.v-rule {
+  height: 1px;
+  background: var(--rule);
+  border: none;
+  margin: 18px 0;
+}
+.v-rule--ink { background: var(--ink); }
+
+/* ── кнопки ── */
+.v-btn {
+  display: inline-block;
+  background: var(--ink);
+  color: var(--paper);
+  border: 2px double var(--ink);
+  padding: 12px 28px;
+  font-family: var(--display);
+  font-size: 14px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  text-decoration: none;
+}
+.v-btn:hover  { background: var(--ink-soft); }
+.v-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.v-btn--ghost {
+  background: transparent;
+  color: var(--cover-gold);
+  border-color: var(--cover-gold);
+}
+.v-btn--link {
+  background: transparent;
+  border: none;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--ink-faded);
+  letter-spacing: 0;
+  text-transform: none;
+  padding: 0;
+  cursor: pointer;
+}
+.v-btn--link:hover { color: var(--ink); }
+
+/* ── формы ── */
+.v-field-label {
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: 9px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--terra);
+  margin-bottom: 6px;
+}
+.v-input,
+.v-select {
+  width: 100%;
+  font-family: var(--serif);
+  font-size: 16px;
+  font-style: italic;
+  color: var(--ink);
+  border: none;
+  border-bottom: 1px solid var(--ink);
+  padding: 0 0 6px 0;
+  background: transparent;
+  outline: none;
+  appearance: none;
+  color-scheme: light;
+}
+.v-input[type="date"],
+.v-input[type="time"] { font-style: normal; }
+.v-input:focus,
+.v-select:focus { border-bottom-color: var(--terra); }
+
+.v-fieldset {
+  padding: 14px 16px;
+  background: var(--paper-deep);
+  border: 1px dashed var(--rule);
+}
+
+/* ── таблицы / списки растений ── */
+.v-row-divider { border-bottom: 1px solid var(--rule); }
+.v-row-divider--ink { border-bottom: 2px solid var(--ink); }
+
+.v-tag {
+  display: inline-block;
+  padding: 3px 8px;
+  background: var(--paper-deep);
+  border: 1px solid var(--rule);
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--terra);
+}
+
+.v-icon-cell {
+  width: 70px;
+  height: 70px;
+  background: var(--paper-deep);
+  border: 1px solid var(--rule);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink);
+  flex-shrink: 0;
+}
+
+/* ── боковые блоки ── */
+.v-aside {
+  border: 1px solid var(--ink);
+  padding: 16px;
+  margin-bottom: 14px;
+}
+.v-aside--soft {
+  background: var(--paper-deep);
+  border: 1px solid var(--rule);
+  padding: 14px;
+}
+
+/* ── текстура «старая бумага» — тонкое зерно радиальными точками ── */
+.v-grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  opacity: 0.5;
+  background-image:
+    radial-gradient(rgba(60,40,10,.08) 1px, transparent 1px),
+    radial-gradient(rgba(60,40,10,.06) 1px, transparent 1px);
+  background-size: 3px 3px, 7px 7px;
+  background-position: 0 0, 1px 2px;
+}
+.v-sheet--cover.v-grain::after { opacity: 0.3; }
+
+/* ── контейнер страницы ── */
+.v-page {
+  width: 100%;
+  max-width: 1000px;
+  margin: 40px auto;
+  padding: 0 16px;
+}
+.v-page--narrow { max-width: 640px; }
+.v-page--wide   { max-width: 1100px; }

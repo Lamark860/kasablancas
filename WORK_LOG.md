@@ -9,9 +9,10 @@
 ## Состояние на текущий момент
 
 - **Дата:** 2026-05-05
-- **Активный этап:** 6 завершён, переходим на 7 (UI эксперта на Nuxt). Теперь самое время поставить браузерный MCP для проверки фронта против `Prototype.html`.
-- **Что работает:** 5 оракулов + полный набор фильтров эксперта (USDA, sun, soil, дерево-враг, is_weed_like). На живом API при `apply_filters=true` для Евы 5.03.2000 (зона 4): дуб исключается как дерево-враг, инжир — по USDA, ива остаётся первой. **117/117 pytest зелёные**.
-- **Блокеров:** нет
+- **Этап 9 ✅ завершён** (расширенный — треки A, D, E, B5, F1; B6/B7 отложены пользователем). Этап 10 (публичный бот) **заморожен** до отдельной отмашки.
+- **Активный этап:** **9.5 — добивка данных и тестирование** (промежуточный между 9 и 10). Что делаем здесь: коллега тестирует инструмент на реальных гостьях, расширяет содержимое справочников (растения, оракулы), даёт фидбэк по PDF/UI. Я правлю по факту находок.
+- **Что работает:** полный флоу `/intake` (с blur-валидацией места рождения через OSM + выбором кандидата) → `/expert/{id}` (с историей версий, per-plant заметками, кураторским режимом) → `/client/{id}` → PDF (без некрасивых разрывов на 2-й странице). Админка для эксперта-непрограммиста: структурные формы matcher, хелп-тексты, безопасный reseed (upsert), кнопка «Выгрузить в JSON». Бэк: **157/157 pytest зелёные**.
+- **Блокеров:** нет.
 
 ## Как проверить, в каком состоянии проект сейчас
 
@@ -353,23 +354,280 @@ docker compose exec api python -m vlad.seed
 docker compose exec api pytest -q                       # 117 passed
 ```
 
-### Этап 7 — UI эксперта *(следующий)*
+### Этап 7 — UI эксперта ✅
 
-См. `handoff/04-roadmap.md` → «Этап 7». Это первый этап, где работа на
-фронте: переносим стилевые константы из `victorian-styles.jsx` в
-`web/assets/styles/victorian.css`, шрифты IM Fell + Cormorant Garamond,
-страницы `pages/index.vue` (список), `pages/intake.vue` (форма ввода),
-`pages/expert/[id].vue` (пул с источниками), компоненты `PlantCard.vue` и
-`OracleBadge.vue`. Эталон UX — `Prototype.html` в корне репозитория.
+**Цель:** UI этапа 1 — эксперт может ввести клиента и увидеть пул.
 
-**Перед стартом:** разумно поставить **Chrome DevTools MCP** или
-**Playwright MCP**, чтобы я мог зайти на `localhost:3100`, снять скриншот,
-сравнить с прототипом, поймать консольные ошибки. До этапа 7 он был не
-нужен.
+**Сделано:**
+- [x] `web/assets/styles/victorian.css` — токены и утилиты из
+  `victorian-styles.jsx` (палитра, шрифты, рамки, кнопки, формы, таблицы,
+  «бумажная» зернистость). `globals.css` свёрнут до базовых сбросов.
+- [x] Шрифты IM Fell English + UnifrakturCook + EB Garamond + Cormorant
+  Garamond + IBM Plex Mono подключены через Google Fonts CDN в `app.head`
+  (формула из `Prototype.html`, добавлен Cormorant Garamond).
+- [x] `composables/useApi.ts` — типизированная обёртка: `Person`, `PersonInput`,
+  `PoolEntry`, `OracleSource`, `Exclusion`, `RecommendOutput`, методы
+  `listPersons / getPerson / createPerson / deletePerson / recommend / listOracles`.
+- [x] `components/OracleBadge.vue` — мини-бейдж «источник» с tooltip-`reason_for_expert`.
+- [x] `components/PlantCard.vue` — карточка растения: иконка, имя+slug,
+  лента OracleBadge, краткая история, причины-цитаты от каждого оракула,
+  правый блок со звёздами + match_count + total_weight + notes (например
+  «is_weed_like — вес 0.5»).
+- [x] `pages/index.vue` — реестр клиентов (GET /persons/ + кнопка «новая гостья»,
+  кнопка «↻ обновить»).
+- [x] `pages/intake.vue` — форма ввода (имя × 3, дата/время/место, пол, взгляд,
+  fieldset «Сад» = регион + USDA-зона + свет + почва). Отправка POST /persons,
+  после успеха — редирект на `/expert/{id}`. Ошибки бэка — в красную плашку.
+- [x] `pages/expert/[id].vue` — экспертный лист: masthead с гостьей, основная
+  колонка `PlantCard[]`, правая колонка с `fontes` (active_oracles),
+  чек-боксом `apply_filters` (re-fetch на тогглинге через `watch` в
+  `useAsyncData`) и блоком `exclusi`.
+- [x] **Браузерный smoke** через Chrome DevTools MCP: `/` → `/intake` →
+  заполнил Еву 5.03.2000 (Москва, blue, USDA 4) → `/expert/2` рендерит
+  Иву (3 пересечения, вес 2.45) + Яблоню (от имени, 0.60), исключены fig
+  и oak. Тоггл фильтров переключает на сырой пул (4 растения с инжиром и
+  дубом). Консоль чистая.
 
-### Этапы 8–10 *(не начаты)*
+**Зачищенные грабли:**
+- **CORS-блокер:** SSR ходил из docker-сети на `http://api:8000` и работал,
+  но клиентский CSR-fetch к `http://localhost:8100` падал на CORS — pydantic-settings
+  не парсит `CORS_ORIGINS=http://localhost:3100` из `.env` как список (ждёт
+  JSON). Чинится валидатором в `Settings`: принимаем CSV. Дефолт обновлён на
+  `http://localhost:3100`. См. DECISIONS.md §21.
 
-Полный план — в `handoff/04-roadmap.md`.
+**Заметки и компромиссы:**
+- §21: иконки растений — пока заглушка (стилизованный SVG-кружок с веточкой)
+  вместо набора `Botanical kind="willow|peony|…"` из `victorian-styles.jsx`.
+  В `plants.json` поле `image_url`/`icon` не заведено. На этапе 8 (клиент-режим
+  + PDF) понадобится. Пока упорядочено через единый стиль карточек.
+- Шрифт `IM Fell English SC` для display-заголовков заменён на
+  `UnifrakturCook` (как в Prototype.html) — он лучше читается и отдаётся
+  с Google Fonts стабильно.
+
+**Как продолжить с нуля:**
+```bash
+cd "/Users/maximlomaev/projects/Vlad rev1(1)/starter"
+docker compose up -d
+docker compose exec api python -m vlad.seed
+docker compose exec api pytest -q                 # 117 passed
+open http://localhost:3100/                       # реестр гостий
+# /intake → форма; /expert/{id} → пул с фильтрами
+```
+
+### Этап 8 — Клиент-режим + PDF ✅
+
+**Цель:** красивый отчёт, который можно показать клиенту или распечатать.
+
+**Сделано:**
+- [x] `schemas/curated.py` — `CuratedSave` (вход PUT) + `RecommendationOut`.
+- [x] Роуты в `routes/persons.py`:
+  - `PUT /persons/{id}/recommendation` — пересчитывает оркестратор и
+    сохраняет/обновляет одну Recommendation на Person (последняя
+    побеждает; повторный PUT не плодит строк, см. DECISIONS.md §11).
+    Сохраняет `input_snapshot` (срез ключевых полей Person), `active_oracles`,
+    `raw_pool`, `curated_pool`, `title_plant_slug`, `expert_notes`.
+  - `GET /persons/{id}/recommendation` — последняя сохранённая.
+- [x] `vlad/pdf/__init__.py` — `render_client_report()` через Jinja2-шаблон
+  + `weasyprint`. Берёт `Plant.name_lat` из БД, `name_ru/short_story` из
+  `rec.raw_pool`. Если `title_plant_slug` есть, ставит его первым.
+- [x] `vlad/pdf/templates/client_report.html` — A4-шаблон в стиле
+  `ScreenClient` прототипа: овальная плашка с буквой главного дерева,
+  заголовок UnifrakturCook, italic-цитата, грид «сопровождающих»,
+  фрейм с заметкой эксперта.
+- [x] `routes/reports.py` — `GET /reports/{person_id}.pdf`. RFC 5987
+  кодирование кириллического имени файла в Content-Disposition (см.
+  DECISIONS.md §23).
+- [x] **+6 тестов (всего 123):** `test_curated.py` — PUT создаёт строку,
+  повторный PUT обновляет (id не меняется), 404 пока не сохранено и
+  для unknown person, PDF возвращает application/pdf, начинается с `%PDF`,
+  >4 КБ.
+- [x] Frontend: `useApi.ts` дополнен `saveCurated/getCurated/reportPdfUrl`;
+  `PlantCard.vue` принимает `curatable/curated/isTitle` и эмитит
+  `toggle-curated/set-title`; `pages/expert/[id].vue` обзавёлся блоком
+  «collectio» с textarea для заметок и кнопкой «сохранить и открыть лист
+  гостьи»; новая `pages/client/[id].vue` рендерит лист без источников и
+  весов, кнопка «скачать pdf» → `<a href target=_blank>` на `/reports/{id}.pdf`.
+- [x] **End-to-end smoke через curl:** Ева 5.03.2000, USDA 4 →
+  PUT с `curated=[willow,apple,birch], title=willow, notes="вокруг ивы…"`
+  → GET PDF: 18 КБ, magic `%PDF`, заголовок
+  `filename*=UTF-8''hortus-animae-%D0%95%D0%B2%D0%B0-3.pdf`. Сохранил в
+  `uploads/eva-report.pdf`.
+
+**Заметки и компромиссы:**
+- §22: иконки растений в PDF — единая «инициала-в-овале» (первая буква
+  главного дерева в круглой плашке). Полный набор `Botanical` SVG из
+  `victorian-styles.jsx` пока не перенесён.
+- §23: имя файла в Content-Disposition закодировано по RFC 5987
+  (`filename* + ASCII-fallback`) — иначе кириллица в `first_name`
+  ломает HTTP-заголовок.
+- §24: WeasyPrint работает с системными засечками, без подгрузки IM Fell
+  из Google Fonts. CSS-шаблон ссылается на UnifrakturCook + Cormorant
+  Garamond; если их нет в контейнере, fallback идёт на Garamond/Georgia
+  (для PDF этого достаточно, ничего не «ломается»).
+
+**Как продолжить с нуля:**
+```bash
+cd "/Users/maximlomaev/projects/Vlad rev1(1)/starter"
+docker compose up -d
+docker compose exec api python -m vlad.seed
+docker compose exec api pytest -q                    # 123 passed
+
+# end-to-end smoke
+PID=$(curl -s -X POST -H 'Content-Type: application/json' \
+  -d '{"first_name":"Ева","birth_date":"2000-03-05","eye_color":"blue","garden_zone_usda":4}' \
+  http://localhost:8100/persons/ | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])")
+curl -s -X PUT -H 'Content-Type: application/json' \
+  -d '{"curated_slugs":["willow","apple"],"title_plant_slug":"willow"}' \
+  http://localhost:8100/persons/$PID/recommendation > /dev/null
+curl -s -o eva.pdf http://localhost:8100/reports/$PID.pdf && head -c 4 eva.pdf
+# ожидание: "%PDF"
+```
+
+### Этап 9 (расширенный) — наполнение и шлифовка ✅
+
+**Цель:** инструмент готов к ежедневной работе коллеги-эксперта без участия программиста.
+
+Этап разделён на треки (см. `DECISIONS.md` приложение «Этап 9»):
+- **Трек A — админка для эксперта** ✅ закрыт.
+- **Трек B5 — шрифты и центрирование PDF** ✅ закрыт.
+  - **B6 (локальные .woff2 для PDF)** и **B7 (SVG-иконки растений)** — пользователь принял решение **не делать сейчас**. Остаются как кандидаты на этап 9.5/после, если коллега скажет что критично.
+- **Трек C — контент** ⏸ ждёт фидбэк коллеги (цветы/травы в plants.json, sun/soil_moisture, канон для slavic/lunar/druid_flower) — переезжает в этап 9.5.
+- **Трек D — история и заметки** ✅ закрыт.
+- **Трек E — точечные улучшения UX** ✅ закрыт (E1 разрывы PDF, E2 удаление гостьи).
+- **Трек F — валидация ввода** ✅ закрыт (F1 blur-геокод).
+
+#### Трек A — админка для эксперта ✅
+
+**Что сделано:**
+- [x] **A1+A2:** в `/admin/oracle-entry/{create,edit}` сырое JSON-поле `matcher` заменено на структурные виртуальные поля. Под каждый из 5 типов матчера — свой UI:
+  - `date_range_yearly`: «с (MM-DD)» + «по (MM-DD)» + Regexp-валидатор
+  - `zodiac_sign`: dropdown 12 знаков
+  - `name_pythagorean_number`: integer 1..9
+  - `eye_color`: dropdown 7 цветов
+  - `name_match`: текстовое поле
+  Реализовано через `scaffold_form` → подкласс с виртуальными полями + override `process` (prefill из `obj.matcher` при edit) + `validate` (проверяет sub-поле под выбранный тип) + `on_model_change` (собирает обратно `data["matcher"]`, удаляет виртуальные ключи). FK поля `oracle_id`, `plant_slug` — отдельные SelectField со списком из БД (sqladmin сам их выкидывает как FK columns).
+  Описания (form_args description) проставлены на ключевых полях `Plant` (slug, hierarchy_potential, min_zone_usda, sun, soil_moisture, is_weed_like, ...), `Oracle` (active, weight, sort_order), `OracleEntry` (vote_weight, role, reason_*).
+- [x] **A3:** `vlad/seed.py` переведён на **безопасный upsert по составному ключу** `(oracle_id, plant_slug, json.dumps(matcher, sort_keys=True))`. Ручные правки эксперта в `/admin` больше не теряются при reseed. Старое жёсткое поведение доступно по флагу `--prune-missing`. **Отменяет §3** в `DECISIONS.md`, см. §26.
+- [x] **A4:** `vlad/dump_seed.py` + кнопка «Выгрузить в JSON» в `/admin` (`SeedDumpView`, sqladmin BaseView). Эксперт правит данные через UI, программист потом запускает `python -m vlad.dump_seed` или коллега жмёт кнопку — JSON-файлы перезаписываются, можно зафиксировать в git.
+
+**Тестов добавлено:** +20 (10 — admin matcher form, 4 — seed upsert/prune, 6 — dump round-trip + view smoke). Всего **143 passed**.
+
+**Заметки и компромиссы:**
+- §25: matcher через виртуальные поля Form, не через нативный JSONField. Цена возврата минимальная.
+- §26: reseed теперь upsert, а не truncate. Отменяет §3.
+- §27: страница seed-dump в `/admin` рендерится без sqladmin layout (standalone-HTML). Операция редкая, кнопка есть в боковом меню.
+
+**Как продолжить с нуля:**
+```bash
+cd "/Users/maximlomaev/projects/Vlad rev1(1)/starter"
+docker compose up -d
+docker compose exec api python -m vlad.seed                 # безопасный upsert
+docker compose exec api pytest -q                           # 143 passed
+open http://localhost:8100/admin/oracle-entry/create        # структурный matcher
+open http://localhost:8100/admin/seed-dump                  # кнопка выгрузки
+```
+
+#### Трек D — история и заметки на растение ✅
+
+**Что сделано:**
+- [x] **D9 (заметки эксперта на каждое растение):**
+  - В `Recommendation.curated_pool` хранится новый формат `list[{plant_slug, expert_note}]`. Старые записи `list[str]` нормализуются на чтении (см. §28).
+  - `CuratedSave` принимает `curated: [{plant_slug, expert_note}]`. Поле `curated_slugs: list[str]` оставлено для backward compat — превращается в `curated` без заметок через `model_validator`.
+  - На `/expert/{id}` под каждой PlantCard в curated-режиме теперь есть `<textarea>` с заметкой. State хранится как `Map<slug, note>`.
+  - В `/client/{id}` и в PDF — заметка курсивом в плашке `border-left:terra` под коротким описанием растения. Главное дерево получает свой блок `main-tree__note`.
+- [x] **D8 (история рекомендаций):**
+  - `PUT /persons/{id}/recommendation` теперь **плодит новую строку** при каждом вызове (раньше обновлял in-place — отменено §29 относительно §11).
+  - Новые эндпоинты: `GET /persons/{id}/recommendations` (список, новейшая первая, без тяжёлого `raw_pool`) и `GET /persons/{id}/recommendations/{rec_id}` (конкретная версия).
+  - На `/expert/{id}` боковая панель «historiae · Версии подбора» появляется при ≥2 версиях. У каждой строки — дата, главное дерево, размер пула, кнопка «загрузить» (заполняет local state из выбранной версии, эксперт жмёт «сохранить» — создаётся новая версия из этой).
+  - `GET /persons/{id}/recommendation` (сингулярный) и PDF продолжают использовать последнюю версию по `id`.
+
+**Тестов добавлено:** +7 (1 unit на legacy-нормализацию pdf, 2 — per-plant notes API + PDF render, 4 — история: list/empty/404, конкретная версия, плодит новые).
+Всего **150 passed**.
+
+**Заметки и компромиссы:**
+- §28: формат `curated_pool` в БД — теперь `list[{plant_slug, expert_note}]`. Старые `list[str]` нормализуются на чтении в `pdf._normalize_curated` и `RecommendationOut._normalize`. Цена возврата минимальная.
+- §29: PUT `/recommendation` теперь плодит новую строку. Отменяет §11. Эксперт может вернуть прошлую версию через UI; миграция БД не нужна (UNIQUE на person_id никогда не было).
+
+**Как продолжить с нуля:**
+```bash
+cd "/Users/maximlomaev/projects/Vlad rev1(1)/starter"
+docker compose up -d
+docker compose exec api python -m vlad.seed
+docker compose exec api pytest -q                           # 150 passed
+
+# end-to-end smoke с историей и заметками
+PID=$(curl -s -X POST -H 'Content-Type: application/json' \
+  -d '{"first_name":"Аня","birth_date":"1992-07-15","eye_color":"brown","garden_zone_usda":5}' \
+  http://localhost:8100/persons/ | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])")
+curl -s -X PUT -H 'Content-Type: application/json' \
+  -d '{"curated":[{"plant_slug":"willow","expert_note":"у пруда"},{"plant_slug":"apple","expert_note":"карлик"}],"title_plant_slug":"willow"}' \
+  http://localhost:8100/persons/$PID/recommendation > /dev/null
+curl -s -X PUT -H 'Content-Type: application/json' \
+  -d '{"curated_slugs":["willow","apple","birch"],"title_plant_slug":"willow"}' \
+  http://localhost:8100/persons/$PID/recommendation > /dev/null
+curl -fsS http://localhost:8100/persons/$PID/recommendations | python3 -m json.tool   # 2 версии
+open http://localhost:3100/expert/$PID                                                 # боковая панель «historiae»
+```
+
+#### Трек B (частично) — шрифты и разрывы PDF ✅ B5+E1
+
+**B5:** font-size +2px на сайте по ступеням (11→13, 12→14, 13→15, 14→16); +1pt в PDF (10→11, 11→12, 13→14). Mono-eyebrow 8-9px и display-заголовки не трогали. Затронуты `victorian.css` + 6 страниц/компонентов (43 правила) + `client_report.html`.
+Иконка-инициал главного дерева в `/client/{id}` и в PDF: `position:absolute + flex` срывал центрирование в WeasyPrint — переведено на `inline-flex` без absolute.
+
+**E1 (PDF, разрывы при 3+ растениях):** добавлены `page-break-inside: avoid` на `.main-tree`, `.other`, `.notes`; `page-break-after: avoid` на `.others__eyebrow` (заголовок не висит отдельно от карточек). Главное дерево, отдельные карточки-спутники и общая заметка не рвутся пополам — PDF разбивается по разумным границам.
+
+**B6 (локальные .woff2) и B7 (SVG Botanical) — отложены пользователем.**
+
+#### E2 — удаление гостьи на главной ✅
+
+На `/index.vue` рядом с кнопкой «пул растений →» добавлена кнопка «× удалить»: `window.confirm` → `DELETE /persons/{id}` (cascade удаляет все Recommendation + NatalChart) → `refresh`. Ошибки показываются в плашке под списком.
+
+#### F1 — blur-валидация места рождения ✅
+
+До этого `birth_place` геокодился на бэке best-effort: опечатка → молча null, неоднозначность → молча первый кандидат. Эксперт не видел расхождений с реальностью, асцендент тихо не считался.
+
+**Бэк:** новый эндпоинт `GET /geocode/?q=...&limit=5` (роут `routes/geocode.py`). `natal/geocode.py` расширен функцией `search_places` (`Nominatim.geocode(exactly_one=False)` + `tz` через `timezonefinder`), `GeoResult` получил поле `label`. Старый `geocode_place` оставлен как backward-compat для POST `/persons` без явных координат.
+
+**Фронт `/intake.vue`:** поле «Место» имеет blur-handler. Состояния:
+- `idle` — пусто, ничего не показано
+- `searching` — серая плашка «ищу координаты…»
+- `one` (1 кандидат) — зелёный блок с label + координаты (auto-select)
+- `many` (2+) — radio-список с label и координатами
+- `not_found` (0) — красная плашка «место не найдено»
+- `error` — красная плашка о недоступности геокодера
+
+Кнопка «↻ найти заново» рядом с лейблом — на случай повторной проверки. `submit` блокируется если `birth_place` введён, но кандидат не выбран (`placeNeedsResolution`). Если эксперт оставил поле пустым — submit идёт без координат, как раньше.
+
+**Тестов добавлено:** +7 на route + search_places (моки geopy через monkeypatch). Реальный Nominatim не дёргаем в тестах. Всего **157/157 passed**.
+
+**Заметки и компромиссы:**
+- §30: search_places вызывается на blur, не на ввод. Nominatim имеет rate limit 1 req/sec, debounced-автокомплит лёгко ловит 429. Для редкой формы (одна гостья за сессию) blur — оптимальный трейдофф.
+- §31: бэк по-прежнему делает best-effort geocode при POST `/persons` без координат — для admin/curl-сценариев и backward-compat.
+
+### Этап 9.5 — добивка данных и тестирование (промежуточный) ⚠️ в работе
+
+**Цель:** прогнать инструмент на 5-10 реальных гостьях коллеги, найти что не сходится с её ожиданиями, дополнить справочники, отполировать места по факту.
+
+**Природа этого этапа:** не код, а **обкатка**. Большая часть работы — у коллеги (тестировать, давать фидбэк, заполнять данные). Мои действия — реактивные, по её находкам.
+
+**Что входит:**
+- [ ] **Контент (трек C):** дополнить `plants.json` цветами/травами (разблокирует `druid_flower` и закроет дыры zodiac/eye_color/numerology), заполнить `sun`/`soil_moisture` для 22 деревьев (оживит §19), канонический набор для `slavic`/`lunar`. Делается **через админку** коллегой.
+- [ ] **Тестирование на реальных гостьях:** проверить, что подбор «звучит» эксперту, что заметки удобно вводить, что PDF читается клиентом.
+- [ ] **Правки по фидбэку коллеги:**
+  - возможно вернуться к B6 (локальные .woff2) если шрифты в PDF критично выпадают на тех машинах, куда отправляется PDF
+  - возможно вернуться к B7 (SVG-иконки растений) если коллега решит что иконки-«заглушки» неприемлемы для клиента
+  - другие точечные UX-правки
+- [ ] **Дополнительные кандидаты на работу** (моё предложение, не зафиксировано):
+  - `ADMIN-GUIDE.md` — короткая инструкция коллеге «как добавить запись через админку»
+  - удаление версии из истории (DELETE на конкретный rec_id + крестик в блоке historiae)
+  - поиск по имени и индикатор «есть рекомендация» в реестре
+  - импорт CSV (упростит коллеге расширение `plants.json` через Excel)
+
+**Когда завершён:** когда коллега довольна инструментом, прогнала ≥5 гостей, дала добро на этап 10 (или решила оставить этап 9.5 «навсегда» — это тоже валидный финал, см. memory: «продукт ближайшее время и возможно навсегда не на поток, а как инструмент для эксперта»).
+
+### Этап 10 — заморожен ⏸
+
+Telegram-бот, переезд на Postgres, ЮKassa, лендинг (см. roadmap). Запускается **не как продолжение этапа 9.5**, а отдельной темой когда метод обкатан на ≥20 клиентах. См. `feedback_stage10_frozen.md` в памяти.
 
 ---
 

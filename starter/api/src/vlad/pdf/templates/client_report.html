@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>Hortus Animæ — лист гостьи · {{ first_name }}</title>
+  <style>
+    /* WeasyPrint умеет шрифты по @font-face, но Google Fonts CDN не достучаться
+       во время оффлайн-рендера. Берём системные засечки + базовый fallback. */
+    @page {
+      size: A4;
+      margin: 16mm 14mm;
+      background: #ede0c4;
+    }
+
+    :root {
+      --paper:        #ede0c4;
+      --paper-deep:   #dccfae;
+      --ink:          #221a10;
+      --ink-soft:     #4e3f2a;
+      --ink-faded:    #7a6a4a;
+      --rule:         #a8966a;
+      --terra:        #9a3a1f;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: "Cormorant Garamond", "EB Garamond", Garamond, Georgia, serif;
+      font-size: 12pt;
+      line-height: 1.5;
+    }
+
+    .frame {
+      border: 1.5pt solid var(--ink-soft);
+      outline: 0.5pt solid var(--ink-soft);
+      outline-offset: 6pt;
+      padding: 18pt 22pt;
+    }
+
+    .symbols {
+      text-align: center;
+      color: var(--terra);
+      font-size: 14pt;
+      letter-spacing: 6pt;
+      margin-bottom: 6pt;
+    }
+
+    .masthead {
+      text-align: center;
+      border-bottom: 1pt solid var(--rule);
+      padding-bottom: 12pt;
+    }
+    .masthead h1 {
+      font-family: "UnifrakturCook", "Cormorant Garamond", serif;
+      font-weight: 400;
+      font-size: 28pt;
+      margin: 0;
+      letter-spacing: 0.04em;
+    }
+    .masthead .sub {
+      font-style: italic;
+      font-size: 11pt;
+      color: var(--ink-faded);
+      margin-top: 4pt;
+    }
+
+    .for {
+      text-align: center;
+      margin: 18pt 0 24pt;
+    }
+    .for__label {
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 8pt;
+      letter-spacing: 0.36em;
+      text-transform: uppercase;
+      color: var(--terra);
+    }
+    .for__name {
+      font-family: "UnifrakturCook", "Cormorant Garamond", serif;
+      font-size: 32pt;
+      margin-top: 4pt;
+    }
+
+    .main-tree {
+      border-top: 1pt solid var(--ink);
+      border-bottom: 1pt solid var(--rule);
+      padding: 18pt 0 22pt;
+      text-align: center;
+      margin-top: 6pt;
+      /* главное дерево не разрывается между страницами */
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .main-tree__eyebrow {
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 8pt;
+      letter-spacing: 0.36em;
+      text-transform: uppercase;
+      color: var(--terra);
+      margin-bottom: 16pt;
+    }
+    .main-tree__name {
+      font-family: "UnifrakturCook", "Cormorant Garamond", serif;
+      font-size: 30pt;
+      line-height: 1;
+      margin: 0;
+    }
+    .main-tree__lat {
+      font-style: italic;
+      color: var(--ink-faded);
+      font-size: 11pt;
+      margin-top: 4pt;
+    }
+    .main-tree__story {
+      font-style: italic;
+      font-size: 14pt;
+      line-height: 1.6;
+      margin: 16pt auto 0;
+      max-width: 360pt;
+      color: var(--ink);
+    }
+
+    /* Кружок-инициал. WeasyPrint срывает центрирование, если буква
+       absolute+inset:0 внутри flex-контейнера: переходим на inline-flex
+       без абсолютного позиционирования. ::after — внутренний кружок. */
+    .icon-circle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 110pt;
+      height: 110pt;
+      border: 1pt solid var(--ink);
+      border-radius: 50%;
+      background: var(--paper-deep);
+      position: relative;
+      margin-bottom: 10pt;
+    }
+    .icon-circle::after {
+      content: '';
+      position: absolute;
+      inset: 8pt;
+      border: 0.5pt solid var(--ink);
+      border-radius: 50%;
+      opacity: 0.4;
+      pointer-events: none;
+    }
+    .icon-circle__letter {
+      font-family: "UnifrakturCook", "Cormorant Garamond", serif;
+      font-size: 38pt;
+      line-height: 1;
+      color: var(--ink);
+    }
+
+    .others {
+      margin-top: 22pt;
+    }
+    .others__eyebrow {
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 8pt;
+      letter-spacing: 0.36em;
+      text-transform: uppercase;
+      color: var(--terra);
+      text-align: center;
+      margin-bottom: 14pt;
+      /* eyebrow не должен висеть отдельно от своих карточек */
+      page-break-after: avoid;
+      break-after: avoid;
+    }
+    .others__grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12pt;
+    }
+    .other {
+      border: 0.6pt solid var(--rule);
+      padding: 10pt 12pt;
+      /* карточка-спутник не рвётся пополам */
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .other__name {
+      font-family: "UnifrakturCook", "Cormorant Garamond", serif;
+      font-size: 14pt;
+      color: var(--ink);
+    }
+    .other__lat {
+      font-style: italic;
+      font-size: 9pt;
+      color: var(--ink-faded);
+      margin-top: 2pt;
+    }
+    .other__story {
+      font-style: italic;
+      font-size: 11pt;
+      color: var(--ink-soft);
+      margin-top: 6pt;
+      line-height: 1.4;
+    }
+    .other__note {
+      margin-top: 6pt;
+      padding: 5pt 8pt;
+      background: var(--paper-deep);
+      border-left: 1.5pt solid var(--terra);
+      font-style: italic;
+      font-size: 11pt;
+      color: var(--ink);
+      line-height: 1.4;
+    }
+    .main-tree__note {
+      margin: 12pt auto 0;
+      max-width: 360pt;
+      padding: 6pt 10pt;
+      background: var(--paper-deep);
+      border-left: 1.5pt solid var(--terra);
+      font-style: italic;
+      font-size: 12pt;
+      color: var(--ink);
+      line-height: 1.5;
+      text-align: left;
+    }
+
+    .notes {
+      margin-top: 22pt;
+      padding: 12pt 14pt;
+      background: var(--paper-deep);
+      border-left: 2pt solid var(--terra);
+      font-style: italic;
+      font-size: 12pt;
+      color: var(--ink);
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .notes__eyebrow {
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 7pt;
+      letter-spacing: 0.36em;
+      text-transform: uppercase;
+      color: var(--terra);
+      margin-bottom: 6pt;
+      font-style: normal;
+    }
+
+    .footer {
+      margin-top: 26pt;
+      padding-top: 12pt;
+      border-top: 1pt solid var(--ink);
+      text-align: center;
+      font-style: italic;
+      font-size: 9pt;
+      color: var(--ink-faded);
+    }
+
+    .empty {
+      text-align: center;
+      padding: 40pt 0;
+      font-style: italic;
+      color: var(--ink-faded);
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <div class="masthead">
+      <div class="symbols">☉ ✦ ☾</div>
+      <h1>Hortus Animæ</h1>
+      <div class="sub">персональный лист растений</div>
+    </div>
+
+    <div class="for">
+      <div class="for__label">составлено для</div>
+      <div class="for__name">{{ first_name }}</div>
+    </div>
+
+    {% if main %}
+      <div class="main-tree">
+        <div class="main-tree__eyebrow">главное дерево</div>
+        <div class="icon-circle"><span class="icon-circle__letter">{{ main.name_ru[0] }}</span></div>
+        <div class="main-tree__name">{{ main.name_ru }}</div>
+        {% if main.name_lat %}
+          <div class="main-tree__lat">{{ main.name_lat }}</div>
+        {% endif %}
+        {% if main.short_story %}
+          <div class="main-tree__story">«{{ main.short_story }}»</div>
+        {% endif %}
+        {% if main.expert_note %}
+          <div class="main-tree__note">{{ main.expert_note }}</div>
+        {% endif %}
+      </div>
+
+      {% if others %}
+        <div class="others">
+          <div class="others__eyebrow">сопровождают</div>
+          <div class="others__grid">
+            {% for o in others %}
+              <div class="other">
+                <div class="other__name">{{ o.name_ru }}</div>
+                {% if o.name_lat %}
+                  <div class="other__lat">{{ o.name_lat }}</div>
+                {% endif %}
+                {% if o.short_story %}
+                  <div class="other__story">{{ o.short_story }}</div>
+                {% endif %}
+                {% if o.expert_note %}
+                  <div class="other__note">{{ o.expert_note }}</div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+
+      {% if notes %}
+        <div class="notes">
+          <div class="notes__eyebrow">на полях</div>
+          {{ notes }}
+        </div>
+      {% endif %}
+    {% else %}
+      <div class="empty">эксперт ещё не отметил растения для этой гостьи.</div>
+    {% endif %}
+
+    <div class="footer">folium III · domino · лист гостьи · Hortus Animæ</div>
+  </div>
+</body>
+</html>
