@@ -17,7 +17,7 @@ RUN pip install --no-cache-dir uv
 COPY pyproject.toml ./
 COPY src ./src
 
-RUN uv pip install --system -e .
+RUN uv pip install --system -e ".[dev]"
 
 EXPOSE 8000
 CMD ["uvicorn", "vlad.main:app", "--host", "0.0.0.0", "--port", "8000"]

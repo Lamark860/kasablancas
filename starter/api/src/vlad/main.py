@@ -1,27 +1,20 @@
 """Точка входа FastAPI."""
-from contextlib import asynccontextmanager
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from vlad.admin import setup_admin
 from vlad.config import settings
-from vlad.db import engine, Base
-from vlad.routes import persons, plants, oracles, recommend, reports
-# from vlad.admin import setup_admin   # включить когда модели готовы
+from vlad.db import engine
+from vlad.routes import oracles, persons, plants, recommend, reports
 
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # стартовый код (создание таблиц для разработки — в проде через Alembic)
-    Base.metadata.create_all(bind=engine)
-    yield
-    # код завершения
+# Регистрация ORM в Base.metadata. Тревога — sqladmin без этого импорта
+# не увидит модели; alembic тоже импортирует vlad.models в env.py.
+import vlad.models  # noqa: F401
 
 
 app = FastAPI(
     title="Vlad rev1 API",
     version="0.1.0",
-    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -38,7 +31,7 @@ app.include_router(oracles.router, prefix="/oracles", tags=["oracles"])
 app.include_router(recommend.router, prefix="/recommend", tags=["recommend"])
 app.include_router(reports.router, prefix="/reports", tags=["reports"])
 
-# setup_admin(app, engine)
+setup_admin(app, engine)
 
 
 @app.get("/")

@@ -1,0 +1,66 @@
+[
+  {
+    "id": "druid_tree",
+    "name_ru": "Кельтский гороскоп друидов (деревья)",
+    "description": "Период рождения → дерево",
+    "required_inputs": ["birth_date"],
+    "weight": 1.0,
+    "sort_order": 10
+  },
+  {
+    "id": "druid_flower",
+    "name_ru": "Цветочный гороскоп друидов",
+    "description": "Период рождения → цветок",
+    "required_inputs": ["birth_date"],
+    "weight": 0.8,
+    "sort_order": 20
+  },
+  {
+    "id": "zodiac",
+    "name_ru": "Знаки зодиака → растения",
+    "description": "Знак Солнца → планетарные растения",
+    "required_inputs": ["birth_date"],
+    "weight": 1.0,
+    "sort_order": 30
+  },
+  {
+    "id": "slavic",
+    "name_ru": "Славянский древесный гороскоп",
+    "description": "Период рождения → дерево по славянской традиции",
+    "required_inputs": ["birth_date"],
+    "weight": 0.7,
+    "sort_order": 40
+  },
+  {
+    "id": "name",
+    "name_ru": "Имя → растение",
+    "description": "Этимология/святцы/символика имени",
+    "required_inputs": ["first_name"],
+    "weight": 0.6,
+    "sort_order": 50
+  },
+  {
+    "id": "eye_color",
+    "name_ru": "Цвет глаз → стихия → растения",
+    "description": "Авторская привязка через стихию",
+    "required_inputs": ["eye_color"],
+    "weight": 0.5,
+    "sort_order": 60
+  },
+  {
+    "id": "lunar",
+    "name_ru": "Лунный день рождения → растение",
+    "description": "Лунный календарь",
+    "required_inputs": ["birth_date"],
+    "weight": 0.7,
+    "sort_order": 70
+  },
+  {
+    "id": "numerology",
+    "name_ru": "Нумерология имени → стихия",
+    "description": "Число имени по Пифагору",
+    "required_inputs": ["first_name"],
+    "weight": 0.4,
+    "sort_order": 80
+  }
+]
