@@ -9,28 +9,25 @@
 ## Состояние на текущий момент
 
 - **Дата:** 2026-05-05
-- **Активный этап:** 2 завершён, переходим на 3 (оркестратор + `POST /recommend`)
-- **Что работает:** БД, sqladmin, первый оракул `druid_tree` со всеми 40 entries из research/02, **31/31 pytest зелёные**
+- **Активный этап:** 3 завершён, переходим на 4 (натальная карта + zodiac)
+- **Что работает:** end-to-end через API — POST /persons → POST /recommend → пул растений с источниками. **50/50 pytest зелёные**.
 - **Блокеров:** нет
 
 ## Как проверить, в каком состоянии проект сейчас
 
 ```bash
 cd "/Users/maximlomaev/projects/Vlad rev1(1)/starter"
-docker compose ps                                            # vlad-api, vlad-web в Up
-docker compose exec api pytest -q                            # 31 passed
-docker compose exec api python -m vlad.seed                  # 8 oracles + 22 plants + 40 entries
-docker compose exec api python -c "
-from vlad.db import SessionLocal
-from vlad.oracles.druid_tree import DruidTreeOracle
-from vlad.models import Person
-with SessionLocal() as s:
-    r = DruidTreeOracle().run(Person(first_name='X', birth_date='2000-03-05'), s)
-    print(r[0].plant_slug, '|', r[0].reason_for_client)
-"   # должен напечатать: willow | Ваше дерево — Ива. ...
+docker compose ps                                                  # vlad-api, vlad-web в Up
+docker compose exec api pytest -q                                  # 50 passed
+
+# end-to-end через живой API
+curl -s -X POST -H 'Content-Type: application/json' \
+  -d '{"person":{"first_name":"X","birth_date":"2000-03-05"}}' \
+  http://localhost:8100/recommend/ | python3 -m json.tool
+# pool[0].plant_slug = "willow", reason_for_client = "Ваше дерево — Ива..."
 ```
 
-В `/admin/plant/list` — 22 строки. В `/admin/oracle-entry/list` — 40 строк (все для `druid_tree`).
+Вживую можно потыкать в Swagger: http://localhost:8100/docs — POST /persons, POST /recommend, GET /oracles, GET /plants.
 
 ---
 
@@ -155,24 +152,76 @@ docker compose exec api python -m vlad.seed             # 8 oracles + 22 plants 
 docker compose exec api pytest -q                       # 31 passed
 ```
 
-### Этап 3 — Оркестратор и API *(следующий)*
+### Этап 3 — Оркестратор и API ✅
 
-См. `handoff/04-roadmap.md` → «Этап 3» и `handoff/03-oracle-interface.md` (там
-готовый код оркестратора).
+**Цель:** есть эндпоинт `POST /recommend`, который возвращает пул растений.
+
+**Сделано:**
+- [x] `vlad/core/orchestrator.py` — `recommend(person, db)`: прогоняет все
+  активные оракулы из `ORACLES` (фильтр по `oracles.active=1`), группирует
+  голоса по `plant_slug`, считает `match_count` и `total_weight = vote_weight × oracle_global_weight`,
+  обогащает `plant_name_ru` и `plant_short_story` из таблицы plants, сортирует
+  по `(match_count desc, total_weight desc)`.
+- [x] Pydantic-схемы:
+  - `schemas/person.py`: `PersonBase`/`PersonCreate`/`PersonOut` с валидацией
+    `birth_date` через regex `\d{4}-\d{2}-\d{2}` и Literal-типов для пола, цвета
+    глаз и т.п. (даёт 422 раньше, чем до СheckConstraint).
+  - `schemas/recommendation.py`: `RecommendInput` (либо `person_id`, либо inline
+    `person`, валидация «ровно одно» через model_validator), `RecommendOutput`
+    с `PoolEntry` и `OracleSource`.
+- [x] Роуты:
+  - `POST /persons/`, `GET /persons/`, `GET /persons/{id}`, `DELETE /persons/{id}`
+  - `POST /recommend/` — оба режима (по id и inline)
+  - `GET /plants/` — справочник 22 растений
+  - `GET /oracles/` — 8 оракулов с пометкой `implemented` (есть ли класс в registry)
+- [x] **19 новых тестов** через TestClient + dependency_overrides:
+  - оркестратор: ива на 5.03, пустота при отсутствии birth_date, выключение
+    оракула через `active=0`, применение глобального weight, обогащение story
+  - `/persons` CRUD: create/list/get/delete, 404, валидация regex даты и enum eye_color
+  - `/recommend`: inline-режим, по id, валидация «ровно одно», 404 на чужой id,
+    пустой пул для непокрытой 21.12
+  - `/plants`, `/oracles`: список и пометка implemented
+
+**Заметки и компромиссы:**
+- **Тонкий момент SQLite + TestClient:** TestClient гоняет хэндлеры через
+  threadpool (anyio), и каждый поток получает свою connection. Для in-memory
+  это значит «своя пустая БД». Решение — `StaticPool` в фикстуре `db_session`,
+  одна общая connection на все потоки. Без этого роуты-тесты падали с
+  `no such table: oracles`. Зафиксировано в `tests/conftest.py`.
+- Эфемерный режим `/recommend` принимает inline-Person без сохранения в БД —
+  пригодится для публичного бота (этап 10).
+- Запись результата в таблицу `recommendations` пока **не делается** —
+  history-фича вынесена в этап 9 (полировка). Сейчас оркестратор только считает.
+- Пока активен один оракул, поэтому `match_count` всегда = 1. Реальные
+  пересечения появятся на этапе 5; сортировка `(match_count, total_weight)`
+  заработает «по-настоящему» тогда же.
+
+**Как продолжить с нуля:**
+```bash
+cd "/Users/maximlomaev/projects/Vlad rev1(1)/starter"
+docker compose up -d
+docker compose exec api python -m vlad.seed
+docker compose exec api pytest -q                        # 50 passed
+# и потом — http://localhost:8100/docs, потыкать в Swagger
+```
+
+### Этап 4 — Натальная карта *(следующий)*
+
+См. `handoff/04-roadmap.md` → «Этап 4» и `handoff/05-natal-chart.md`.
 
 **План:**
-1. `core/orchestrator.py` — `recommend(person, db) -> list[dict]`: прогон по
-   `ORACLES`, группировка по `plant_slug`, подсчёт `match_count` и `total_weight`,
-   сбор `sources[]` для UI эксперта.
-2. Pydantic-схемы в `schemas/recommendation.py`: `RecommendInput`, `RecommendOutput`,
-   `PoolEntry { plant, match_count, sources[] }`.
-3. Роут `POST /recommend` в `routes/recommend.py` — принимает `person_id` или
-   прямые поля, вызывает оркестратор, возвращает JSON.
-4. Тесты: прогнать оркестратор на тестовом Person, убедиться что в пуле есть
-   ожидаемое дерево от `druid_tree`. Сейчас оракул один, так что пул из 1 элемента —
-   ОК; станет интереснее когда добавим остальные на этапе 5.
+1. Эфемериды Swiss Ephemeris в `api/ephe/` (скачать `.se1` файлы — несколько МБ).
+2. `natal/swisseph_wrapper.py` — расчёт sun/moon/asc + распределение планет
+   по стихиям, кеширует в `NatalChart`.
+3. `natal/geocode.py` — `birth_place` → `lat/lon/tz` через `geopy + timezonefinder`.
+4. При POST /persons (когда задано `birth_place`) — заполнять `birth_lat/lon/tz`.
+5. Оракул `oracles/zodiac.py` — берёт `chart.sun_sign` через `NatalChart`,
+   возвращает планетарные растения (по таблице из `research/04-zodiac-plants.md`).
+6. Сид `data/seed/zodiac.json`.
+7. Тесты: для известной даты+города → ожидаемый sun_sign (например 1990-03-05
+   Москва → pisces, потом проверить какие растения выпали).
 
-### Этапы 4–10 *(не начаты)*
+### Этапы 5–10 *(не начаты)*
 
 Полный план — в `handoff/04-roadmap.md`.
 
