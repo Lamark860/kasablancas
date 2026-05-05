@@ -38,8 +38,10 @@ cp .env.example .env
 docker compose up --build
 ```
 
-- API: http://localhost:8000/docs
-- Web: http://localhost:3000
+- API: http://localhost:8100/docs
+- Web: http://localhost:3100
+
+> Порты сдвинуты с дефолтных 3000/8000 на 3100/8100, чтобы не конфликтовать с другими локальными проектами разработчика.
 
 ## Что делать дальше
 
