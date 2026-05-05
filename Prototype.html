@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<title>Hortus Animæ — прототип</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=UnifrakturCook:wght@700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; padding: 0; min-height: 100%; background: #0e0a06; font-family: "IM Fell English", "EB Garamond", serif; color: #ede0c4; }
+  * { box-sizing: border-box; }
+  body { background-image: radial-gradient(ellipse at 50% 0%, #2a1a0e 0%, #0e0a06 60%); padding: 32px 16px 60px; }
+  ::selection { background: #b89254; color: #1a120b; }
+  /* tiny tab nav */
+  .nav { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 4px; padding: 6px; background: rgba(10,7,4,0.7); border: 1px solid #b89254; backdrop-filter: blur(6px); z-index: 100; }
+  .nav button { background: transparent; color: #b89254; border: none; padding: 8px 14px; font: 500 9px/1 "IBM Plex Mono", monospace; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; }
+  .nav button.on { background: #b89254; color: #1a120b; }
+  .nav button:hover:not(.on) { color: #ede0c4; }
+</style>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="victorian-styles.jsx"></script>
+<script type="text/babel" src="prototype-engine.jsx"></script>
+<script type="text/babel" src="prototype-screens.jsx"></script>
+
+<script type="text/babel" data-presets="env,react">
+  function App() {
+    const [screen, setScreen] = React.useState('cover'); // cover | form | weaving | expert | client
+    const [data, setData] = React.useState({
+      fullName: 'Маргарита Александровна Соловьёва',
+      birthDate: '1985-04-15',
+      birthTime: '06:42',
+      birthPlace: 'Москва',
+      gender: 'женский',
+      eyeColor: 'голубые',
+      gardenLocation: 'Истринский р-н, ~12 соток',
+      zone: 6,
+    });
+    const result = React.useMemo(() => window.findPlants(data), [data]);
+
+    const tabs = [
+      { id: 'cover', label: '✦ обложка' },
+      { id: 'form', label: 'I · анкета' },
+      { id: 'weaving', label: '✦ свод' },
+      { id: 'expert', label: 'II · эксперт' },
+      { id: 'client', label: 'III · гостья' },
+    ];
+
+    return (
+      <React.Fragment>
+        <div className="nav">
+          {tabs.map(t => (
+            <button key={t.id} className={screen === t.id ? 'on' : ''} onClick={() => setScreen(t.id)}>{t.label}</button>
+          ))}
+        </div>
+        <div style={{ paddingTop: 60 }}>
+          {screen === 'cover' && <window.ScreenCover onStart={() => setScreen('form')} />}
+          {screen === 'form' && <window.ScreenForm data={data} setData={setData} onBack={() => setScreen('cover')} onNext={() => setScreen('weaving')} />}
+          {screen === 'weaving' && <window.ScreenWeaving onDone={() => setScreen('expert')} />}
+          {screen === 'expert' && <window.ScreenExpert data={data} result={result} onBack={() => setScreen('form')} onClient={() => setScreen('client')} />}
+          {screen === 'client' && <window.ScreenClient data={data} result={result} onBack={() => setScreen('expert')} />}
+        </div>
+      </React.Fragment>
+    );
+  }
+  ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

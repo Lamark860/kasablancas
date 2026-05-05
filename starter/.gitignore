@@ -1,0 +1,22 @@
+# IDE / OS
+.DS_Store
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+
+# Node
+node_modules/
+.nuxt/
+.output/
+dist/
+
+# Env / БД / эфемериды
+.env
+api/data/*.db
+api/data/*.db-journal
+api/ephe/*.se1

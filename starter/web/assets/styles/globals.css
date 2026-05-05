@@ -1,0 +1,26 @@
+/* Глобальные стили — викторианский гримуар.
+   Реальные стилевые переменные перенеси из victorian-styles.jsx. */
+
+:root {
+  --paper:        #f1e8d0;
+  --paper-deep:   #e6d9b6;
+  --ink:          #2d2218;
+  --ink-soft:     #3d2f20;
+  --ink-faded:    #6b5a44;
+  --terra:        #8b3a1f;
+  --rule:         #a89a78;
+  --gold:         #b08d44;
+
+  --serif:   'IM Fell DW Pica', 'Cormorant Garamond', Georgia, serif;
+  --display: 'IM Fell DW Pica SC', 'Cormorant SC', serif;
+  --sans:    'Inter', system-ui, sans-serif;
+}
+
+html, body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--serif);
+}
+
+* { box-sizing: border-box; }
