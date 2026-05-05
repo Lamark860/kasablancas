@@ -1,0 +1,200 @@
+[
+  {
+    "slug": "apple",
+    "name_ru": "Яблоня",
+    "name_lat": "Malus domestica",
+    "category": "tree",
+    "min_zone_usda": 4,
+    "hierarchy_potential": 4,
+    "short_story": "Древний символ любви, гостеприимства и плодородия — от Авалона до славянского сада."
+  },
+  {
+    "slug": "fir",
+    "name_ru": "Пихта",
+    "name_lat": "Abies alba",
+    "category": "tree",
+    "min_zone_usda": 4,
+    "hierarchy_potential": 3,
+    "short_story": "Хвойное дерево стойкости и благородства, друг суровых зим."
+  },
+  {
+    "slug": "elm",
+    "name_ru": "Вяз",
+    "name_lat": "Ulmus",
+    "category": "tree",
+    "min_zone_usda": 4,
+    "hierarchy_potential": 3,
+    "short_story": "Дерево спокойного достоинства и прочной семьи."
+  },
+  {
+    "slug": "cypress",
+    "name_ru": "Кипарис",
+    "name_lat": "Cupressus sempervirens",
+    "category": "tree",
+    "min_zone_usda": 7,
+    "hierarchy_potential": 3,
+    "short_story": "Южный страж памяти и верности; в средней полосе заменяется можжевельником или туей."
+  },
+  {
+    "slug": "poplar",
+    "name_ru": "Тополь",
+    "name_lat": "Populus",
+    "category": "tree",
+    "min_zone_usda": 3,
+    "hierarchy_potential": 3,
+    "short_story": "Высокое дерево внутреннего разговора и одиночества среди людей."
+  },
+  {
+    "slug": "cedar",
+    "name_ru": "Кедр",
+    "name_lat": "Pinus sibirica",
+    "category": "tree",
+    "min_zone_usda": 4,
+    "hierarchy_potential": 4,
+    "short_story": "Сибирский кедр — древнее дерево здоровья и долгой памяти."
+  },
+  {
+    "slug": "pine",
+    "name_ru": "Сосна",
+    "name_lat": "Pinus sylvestris",
+    "category": "tree",
+    "min_zone_usda": 3,
+    "hierarchy_potential": 3,
+    "short_story": "Сосна — про прямоту, ясность и хвойный воздух жизни."
+  },
+  {
+    "slug": "willow",
+    "name_ru": "Ива",
+    "name_lat": "Salix",
+    "category": "tree",
+    "min_zone_usda": 3,
+    "hierarchy_potential": 4,
+    "short_story": "Ива — артистическая натура, поэтическая печаль, дружба с водой."
+  },
+  {
+    "slug": "linden",
+    "name_ru": "Липа",
+    "name_lat": "Tilia cordata",
+    "category": "tree",
+    "min_zone_usda": 4,
+    "hierarchy_potential": 4,
+    "short_story": "Липа — мягкое сердце, лечащий аромат и материнская мудрость."
+  },
+  {
+    "slug": "oak",
+    "name_ru": "Дуб",
+    "name_lat": "Quercus robur",
+    "category": "tree",
+    "min_zone_usda": 5,
+    "hierarchy_potential": 5,
+    "short_story": "Дуб — основатель и опора; рождённые 21 марта стоят под особой защитой."
+  },
+  {
+    "slug": "hazel",
+    "name_ru": "Орешник (лещина)",
+    "name_lat": "Corylus avellana",
+    "category": "tree",
+    "min_zone_usda": 4,
+    "hierarchy_potential": 3,
+    "short_story": "Лещина — про быструю мысль и неожиданные перемены настроения."
+  },
+  {
+    "slug": "rowan",
+    "name_ru": "Рябина",
+    "name_lat": "Sorbus aucuparia",
+    "category": "tree",
+    "min_zone_usda": 3,
+    "hierarchy_potential": 4,
+    "short_story": "Рябина — алый акцент сада и тонкий вкус хозяйки дома."
+  },
+  {
+    "slug": "maple",
+    "name_ru": "Клён",
+    "name_lat": "Acer platanoides",
+    "category": "tree",
+    "min_zone_usda": 4,
+    "hierarchy_potential": 3,
+    "short_story": "Клён — щедрый огонь осени и доброта без надрыва."
+  },
+  {
+    "slug": "walnut",
+    "name_ru": "Грецкий орех",
+    "name_lat": "Juglans regia",
+    "category": "tree",
+    "min_zone_usda": 6,
+    "hierarchy_potential": 3,
+    "short_story": "Орех — неспешная сила, ум, тенистая прохлада. Севернее — маньчжурский орех."
+  },
+  {
+    "slug": "jasmine",
+    "name_ru": "Чубушник (жасмин)",
+    "name_lat": "Philadelphus",
+    "category": "shrub",
+    "min_zone_usda": 4,
+    "hierarchy_potential": 3,
+    "short_story": "Чубушник — северный жасмин: общительный, аромат как разговор по душам."
+  },
+  {
+    "slug": "chestnut",
+    "name_ru": "Каштан",
+    "name_lat": "Aesculus hippocastanum",
+    "category": "tree",
+    "min_zone_usda": 5,
+    "hierarchy_potential": 3,
+    "short_story": "Каштан — детский парк и тёплая забота о близких."
+  },
+  {
+    "slug": "ash",
+    "name_ru": "Ясень",
+    "name_lat": "Fraxinus excelsior",
+    "category": "tree",
+    "min_zone_usda": 4,
+    "hierarchy_potential": 4,
+    "short_story": "Ясень — реалист, хороший добытчик, связь миров в скандинавской мифологии."
+  },
+  {
+    "slug": "hornbeam",
+    "name_ru": "Граб",
+    "name_lat": "Carpinus betulus",
+    "category": "tree",
+    "min_zone_usda": 5,
+    "hierarchy_potential": 3,
+    "short_story": "Граб — тонкая красота без нарочитости, тихое признание ценится больше шумного."
+  },
+  {
+    "slug": "fig",
+    "name_ru": "Инжир",
+    "name_lat": "Ficus carica",
+    "category": "tree",
+    "min_zone_usda": 7,
+    "hierarchy_potential": 3,
+    "short_story": "Инжир — южная утончённость; в средней полосе заменяют облепихой или иргой."
+  },
+  {
+    "slug": "birch",
+    "name_ru": "Берёза",
+    "name_lat": "Betula pendula",
+    "category": "tree",
+    "min_zone_usda": 3,
+    "hierarchy_potential": 5,
+    "short_story": "Берёза — открытость, материнство, домашнее тепло; рождённые 24 июня — под особой защитой."
+  },
+  {
+    "slug": "olive",
+    "name_ru": "Олива",
+    "name_lat": "Olea europaea",
+    "category": "tree",
+    "min_zone_usda": 8,
+    "hierarchy_potential": 5,
+    "short_story": "Олива — равновесие и миротворчество; на севере её роль играет сирень."
+  },
+  {
+    "slug": "beech",
+    "name_ru": "Бук",
+    "name_lat": "Fagus sylvatica",
+    "category": "tree",
+    "min_zone_usda": 6,
+    "hierarchy_potential": 5,
+    "short_story": "Бук — точность, организованный ум, спокойная власть."
+  }
+]

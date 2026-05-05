@@ -9,23 +9,28 @@
 ## Состояние на текущий момент
 
 - **Дата:** 2026-05-05
-- **Активный этап:** 1 завершён, переходим на 2
-- **Что работает:** docker compose, БД с 6 таблицами + 8 оракулами, sqladmin на `/admin`, 17/17 pytest зелёные
+- **Активный этап:** 2 завершён, переходим на 3 (оркестратор + `POST /recommend`)
+- **Что работает:** БД, sqladmin, первый оракул `druid_tree` со всеми 40 entries из research/02, **31/31 pytest зелёные**
 - **Блокеров:** нет
 
 ## Как проверить, в каком состоянии проект сейчас
 
 ```bash
 cd "/Users/maximlomaev/projects/Vlad rev1(1)/starter"
-docker compose ps                                                  # vlad-api, vlad-web в Up
-curl -fsS http://localhost:8100/                                   # {"name":"vlad-api",...}
-curl -fsS -o /dev/null -w "admin %{http_code}\n" http://localhost:8100/admin/   # admin 200
-docker compose exec api alembic current                            # текущая ревизия
-docker compose exec api sqlite3 /app/data/local.db ".tables"       # 7 таблиц (+alembic_version)
-docker compose exec api pytest -q                                  # 17 passed
+docker compose ps                                            # vlad-api, vlad-web в Up
+docker compose exec api pytest -q                            # 31 passed
+docker compose exec api python -m vlad.seed                  # 8 oracles + 22 plants + 40 entries
+docker compose exec api python -c "
+from vlad.db import SessionLocal
+from vlad.oracles.druid_tree import DruidTreeOracle
+from vlad.models import Person
+with SessionLocal() as s:
+    r = DruidTreeOracle().run(Person(first_name='X', birth_date='2000-03-05'), s)
+    print(r[0].plant_slug, '|', r[0].reason_for_client)
+"   # должен напечатать: willow | Ваше дерево — Ива. ...
 ```
 
-Если pytest зелёный и в `/admin/oracle/list` видно 8 строк — этап 1 пройден.
+В `/admin/plant/list` — 22 строки. В `/admin/oracle-entry/list` — 40 строк (все для `druid_tree`).
 
 ---
 
@@ -109,29 +114,65 @@ docker compose exec api pytest -q                             # 17 passed
 open http://localhost:8100/admin/oracle/list                  # должно быть 8 строк
 ```
 
-### Этап 2 — Сиды и первый оракул *(следующий)*
+### Этап 2 — Сиды и первый оракул ✅
 
-См. `handoff/04-roadmap.md` → «Этап 2».
+**Цель:** есть база растений и первый работающий оракул (друид-деревья).
 
-**План:**
-1. `data/seed/druid-tree.json` — 22 периода друидского календаря деревьев из
-   `research/02-druid-tree-calendar.md` в формате `{matcher: {type:'date_range',from,to}, plant_slug, weight, reason_for_expert}`.
-2. `data/seed/plants.json` — 20–30 растений (минимум те, что встречаются у друидов):
-   `slug`, `name_ru`, `name_lat`, `category`, `min_zone_usda`, `hierarchy_potential`,
-   опционально `element` / `planet`.
-3. Реализовать контракт `oracles/base.py` (Oracle + OracleResult — см. `handoff/03-oracle-interface.md`).
-4. `oracles/druid_tree.py`: на вход Person → читает `oracle_entries` для
-   `oracle_id='druid_tree'` → возвращает соответствие даты рождения.
-5. Зарегистрировать в `oracles/__init__.py` (registry).
-6. Pytest: дата `2000-03-05` → должна выпасть `willow` (ива).
+**Сделано:**
+- [x] `data/seed/plants.json` — 22 растения по таблице из `research/02`
+  (apple, fir, elm, cypress, poplar, cedar, pine, willow, linden, oak, hazel,
+  rowan, maple, walnut, jasmine, chestnut, ash, hornbeam, fig, birch, olive, beech).
+  Поля: slug, name_ru, name_lat, category, min_zone_usda, hierarchy_potential,
+  short_story (1–2 предложения для клиентского отчёта).
+- [x] `data/seed/druid-tree.json` — **40 entries** (18 деревьев × 2 периода + 4
+  одиночных знака), формат matcher = `{type: 'date_range_yearly', from: 'MM-DD', to: 'MM-DD'}`.
+  Reason_for_expert указывает период и пометку про замену для южных видов.
+- [x] `oracles/druid_tree.py` — реализация. Парсит `birth_date` как 'YYYY-MM-DD',
+  обходит entries своего id из БД, поддерживает обёрнутый диапазон (12-23..01-01).
+- [x] Зарегистрирован в `oracles/__init__.py` (ORACLES dict).
+- [x] **14 новых тестов:** параметризованный по 9 ключевым датам (включая 4 одиночных
+  знака и обёрнутый Новый год), проход по всем 365 дням года (доказательство, что
+  интервалы не пересекаются и не имеют дыр кроме намеренной 21.12), пустота при
+  отсутствии/битом birth_date, проверка структуры OracleResult и наличия в registry.
 
-**Smoke после завершения:**
+**Заметки и компромиссы:**
+- **День 21.12 не покрыт ни одним знаком в research/02** (Инжир до 20.12, Бук
+  только 22.12). Оставил как есть — оракул возвращает `[]`. Зафиксировано тестом
+  `test_each_date_resolves_to_exactly_one_tree`. Если эксперт скажет «должен быть
+  Бук на 21.12 тоже» — добавим entry, тест предупредит о расхождении.
+- 29.02 включено в период Сосны (`02-19..02-29`).
+- USDA-зоны для южных видов (cypress=7, walnut=6, fig=7, olive=8, beech=6) —
+  приближённые. Эксперт уточнит в этапе 6 (фильтры участка). Пока влияет только
+  на отображение, фильтрация ещё не подключена.
+- «Дерево-враг» (40 дней до/после) и поправка по дате зачатия из research/02 —
+  не реализованы, это этап 6 (фильтры).
+
+**Как продолжить с нуля:**
 ```bash
-docker compose exec api pytest tests/test_oracle_druid_tree.py -v
-# в /admin/oracle-entry/list — десятки строк для druid_tree
+cd "/Users/maximlomaev/projects/Vlad rev1(1)/starter"
+docker compose up -d                                    # alembic upgrade head
+docker compose exec api python -m vlad.seed             # 8 oracles + 22 plants + 40 entries
+docker compose exec api pytest -q                       # 31 passed
 ```
 
-### Этапы 3–10 — *(не начаты)*
+### Этап 3 — Оркестратор и API *(следующий)*
+
+См. `handoff/04-roadmap.md` → «Этап 3» и `handoff/03-oracle-interface.md` (там
+готовый код оркестратора).
+
+**План:**
+1. `core/orchestrator.py` — `recommend(person, db) -> list[dict]`: прогон по
+   `ORACLES`, группировка по `plant_slug`, подсчёт `match_count` и `total_weight`,
+   сбор `sources[]` для UI эксперта.
+2. Pydantic-схемы в `schemas/recommendation.py`: `RecommendInput`, `RecommendOutput`,
+   `PoolEntry { plant, match_count, sources[] }`.
+3. Роут `POST /recommend` в `routes/recommend.py` — принимает `person_id` или
+   прямые поля, вызывает оркестратор, возвращает JSON.
+4. Тесты: прогнать оркестратор на тестовом Person, убедиться что в пуле есть
+   ожидаемое дерево от `druid_tree`. Сейчас оракул один, так что пул из 1 элемента —
+   ОК; станет интереснее когда добавим остальные на этапе 5.
+
+### Этапы 4–10 *(не начаты)*
 
 Полный план — в `handoff/04-roadmap.md`.
 
