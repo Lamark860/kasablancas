@@ -66,6 +66,8 @@ class RecommendationOut(BaseModel):
     title_plant_slug: str | None = None
     expert_notes: str | None = None
 
+    share_token: str | None = None
+
     created_at: datetime
     updated_at: datetime
 

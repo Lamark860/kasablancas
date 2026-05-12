@@ -54,6 +54,30 @@ const firstName = computed(() => person.value?.first_name || 'госпожа')
 const pdfUrl = computed(() => api.reportPdfUrl(personId.value))
 
 const notSaved = computed(() => recError.value && (recError.value as any)?.statusCode === 404)
+
+const shareUrl = computed(() => {
+  if (!rec.value?.share_token || import.meta.server) return null
+  return `${window.location.origin}/leaf/${rec.value.share_token}`
+})
+
+const copied = ref(false)
+async function copyShareUrl() {
+  if (!shareUrl.value) return
+  try {
+    await navigator.clipboard.writeText(shareUrl.value)
+    copied.value = true
+    setTimeout(() => (copied.value = false), 2000)
+  } catch {
+    // ignore — пользователь сам скопирует
+  }
+}
+
+function fmtCreated(s: string | undefined): string {
+  if (!s) return ''
+  const d = new Date(s)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleDateString('ru-RU', { day: '2-digit', month: 'long', year: 'numeric' })
+}
 </script>
 
 <template>
@@ -102,9 +126,29 @@ const notSaved = computed(() => recError.value && (recError.value as any)?.statu
           </section>
 
           <aside v-if="rec.expert_notes" class="notes">
-            <div class="notes__eyebrow">на полях</div>
+            <div class="notes__eyebrow">тема сада</div>
             <p>{{ rec.expert_notes }}</p>
           </aside>
+
+          <div class="signature">
+            <span class="signature__line"></span>
+            <span class="signature__text">
+              составлено <em>{{ fmtCreated(rec.created_at) }}</em>
+            </span>
+          </div>
+
+          <section v-if="shareUrl" class="share">
+            <div class="share__eyebrow">ссылка для гостьи</div>
+            <div class="share__row">
+              <input class="share__input" :value="shareUrl" readonly @click="($event.target as HTMLInputElement).select()"/>
+              <button type="button" class="v-btn--link share__copy" @click="copyShareUrl">
+                {{ copied ? '✓ скопировано' : 'копировать' }}
+              </button>
+            </div>
+            <div class="share__hint">
+              откроется без регистрации — можно отправить в&nbsp;мессенджер.
+            </div>
+          </section>
 
           <footer class="actions">
             <a :href="pdfUrl" target="_blank" rel="noopener" class="v-btn">
@@ -312,6 +356,72 @@ const notSaved = computed(() => recError.value && (recError.value as any)?.statu
   font-size: 15px;
   line-height: 1.6;
   color: var(--ink);
+}
+
+.signature {
+  margin-top: 28px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.signature__line {
+  display: block;
+  width: 120px;
+  border-bottom: 1px solid var(--ink);
+}
+.signature__text {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--ink-faded);
+}
+.signature__text em {
+  color: var(--ink);
+  font-style: italic;
+}
+
+.share {
+  margin-top: 24px;
+  padding: 14px 16px;
+  background: var(--paper-deep);
+  border: 1px dashed var(--rule);
+}
+.share__eyebrow {
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: 9px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--terra);
+  margin-bottom: 8px;
+}
+.share__row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.share__input {
+  flex: 1;
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  padding: 6px 8px;
+  min-width: 0;
+}
+.share__copy {
+  white-space: nowrap;
+  font-size: 11px;
+}
+.share__hint {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 12px;
+  color: var(--ink-faded);
+  margin-top: 6px;
 }
 
 .actions {

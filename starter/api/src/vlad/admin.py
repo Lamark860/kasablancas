@@ -4,13 +4,17 @@
 """
 from __future__ import annotations
 
+from html import escape
+
 from sqladmin import Admin, BaseView, ModelView, expose
 from starlette.requests import Request
-from starlette.responses import HTMLResponse
+from starlette.responses import HTMLResponse, Response
 from wtforms import IntegerField, SelectField, StringField, validators
 
+from vlad import csv_import
 from vlad.db import SessionLocal
 from vlad.dump_seed import SEED_DIR, dump_all
+from vlad.matcher_describe import describe_matcher
 from vlad.models import (
     NatalChart,
     Oracle,
@@ -19,6 +23,7 @@ from vlad.models import (
     Plant,
     Recommendation,
 )
+from vlad.seed import _entry_key
 
 
 # --- Справочники для форм OracleEntry ---------------------------------
@@ -167,9 +172,17 @@ class OracleEntryAdmin(ModelView, model=OracleEntry):
         OracleEntry.id,
         OracleEntry.oracle_id,
         OracleEntry.plant_slug,
+        "matcher_descr",
         OracleEntry.weight,
         OracleEntry.role,
     ]
+    column_labels = {"matcher_descr": "Сработает для"}
+    column_formatters = {
+        "matcher_descr": lambda m, a: describe_matcher(m.matcher),
+    }
+    column_formatters_detail = {
+        "matcher": lambda m, a: f"{describe_matcher(m.matcher)} — {m.matcher!r}",
+    }
     column_searchable_list = [OracleEntry.oracle_id, OracleEntry.plant_slug]
 
     # Используем FK-столбцы напрямую: relationship `plant` склеен по slug, а не по id,
@@ -334,6 +347,29 @@ class OracleEntryAdmin(ModelView, model=OracleEntry):
         for k in _VIRTUAL_MATCHER_KEYS:
             data.pop(k, None)
 
+        # Dup check: ищем существующую запись с тем же ключом (oracle_id, plant_slug, matcher).
+        # При редактировании исключаем саму редактируемую запись.
+        if matcher is not None and data.get("oracle_id") and data.get("plant_slug"):
+            new_key = _entry_key(data["oracle_id"], matcher, data["plant_slug"])
+            with self.session_maker() as session:
+                current_id = getattr(model, "id", None)
+                clash = None
+                for e in session.query(OracleEntry).filter_by(
+                    oracle_id=data["oracle_id"],
+                    plant_slug=data["plant_slug"],
+                ).all():
+                    if e.id == current_id:
+                        continue
+                    if _entry_key(e.oracle_id, e.matcher, e.plant_slug) == new_key:
+                        clash = e
+                        break
+            if clash is not None:
+                raise ValueError(
+                    f"Уже есть соответствие #{clash.id} с тем же оракулом, растением и "
+                    f"matcher’ом ({describe_matcher(matcher)}). "
+                    f"Отредактируй существующую запись или измени параметры."
+                )
+
 
 class RecommendationAdmin(ModelView, model=Recommendation):
     name = "Рекомендация"
@@ -427,6 +463,182 @@ class SeedDumpView(BaseView):
         return HTMLResponse(_render_dump_page(None, None))
 
 
+def _render_csv_import_page(
+    csv_text: str = "",
+    rows: list | None = None,
+    counts: dict | None = None,
+    committed: dict | None = None,
+    error: str | None = None,
+) -> str:
+    """Standalone HTML для импорта CSV oracle_entries."""
+    safe_csv = escape(csv_text)
+    rows_html = ""
+    if rows is not None:
+        items = []
+        for r in rows:
+            if r.status == "error":
+                badge = '<span style="color:#d4380d;font-weight:600;">×&nbsp;ошибка</span>'
+                detail = "; ".join(r.errors)
+            elif r.status == "new":
+                badge = '<span style="color:#2da44e;font-weight:600;">+&nbsp;новая</span>'
+                detail = r.descr
+            elif r.status == "update":
+                badge = '<span style="color:#bf8700;font-weight:600;">≈&nbsp;обновится</span>'
+                detail = f"{r.descr} (id={r.existing_id})"
+            else:
+                badge = '<span style="color:#777;">=&nbsp;без изменений</span>'
+                detail = f"{r.descr} (id={r.existing_id})"
+            items.append(f"<tr><td>{r.line}</td><td>{badge}</td><td>{escape(detail)}</td></tr>")
+        counts_html = ""
+        if counts:
+            counts_html = (
+                f"<p><strong>Сводка:</strong> "
+                f"+{counts['new']} новых, ≈{counts['update']} обновится, "
+                f"={counts['noop']} без изменений, ×{counts['error']} ошибок.</p>"
+            )
+        commit_disabled = "disabled" if (counts and (counts["new"] + counts["update"] == 0)) else ""
+        commit_block = ""
+        if counts and (counts["new"] + counts["update"] > 0) and counts["error"] == 0:
+            commit_block = f'''
+            <form method="post" action="/admin/csv-import" style="margin-top:1rem;">
+                <input type="hidden" name="action" value="commit"/>
+                <input type="hidden" name="csv_text" value="{safe_csv}"/>
+                <button class="btn btn--primary" type="submit" {commit_disabled}>
+                    Применить ({counts['new'] + counts['update']} записей)
+                </button>
+            </form>
+            '''
+        elif counts and counts["error"] > 0:
+            commit_block = (
+                '<p style="margin-top:1rem;color:#d4380d;">'
+                '<strong>Сначала исправь ошибки в CSV и перезапусти просмотр.</strong></p>'
+            )
+        rows_html = f"""
+        <h2 style="margin-top:2rem;">Просмотр изменений</h2>
+        {counts_html}
+        <table style="width:100%;border-collapse:collapse;font-size:0.92rem;">
+            <thead><tr style="border-bottom:1px solid #ccc;text-align:left;">
+                <th style="padding:6px 8px;">стр.</th>
+                <th style="padding:6px 8px;">статус</th>
+                <th style="padding:6px 8px;">детали</th>
+            </tr></thead>
+            <tbody>{''.join(items)}</tbody>
+        </table>
+        {commit_block}
+        """
+
+    committed_html = ""
+    if committed:
+        committed_html = f"""
+        <div style="margin-top:1rem;padding:1rem;background:#e6ffed;border:1px solid #2da44e;border-radius:6px;">
+            <strong>Готово.</strong> Создано: {committed['created']}, обновлено: {committed['updated']},
+            пропущено (без изменений или ошибок): {committed['skipped']}.
+            <p style="margin-top:0.5rem;"><a href="/admin/oracle-entry/list">→ к списку соответствий</a></p>
+            <p style="color:#555;">Чтобы зафиксировать в git — нажми «Выгрузить в JSON» и закоммить.</p>
+        </div>
+        """
+
+    error_html = (
+        f'<div style="margin-top:1rem;padding:1rem;background:#fff1f0;border:1px solid #d4380d;border-radius:6px;"><strong>Ошибка:</strong> {escape(error)}</div>'
+        if error else ""
+    )
+
+    return f"""<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Импорт соответствий из CSV</title>
+  <style>
+    body {{ font-family: system-ui, sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 1rem; color: #1f2328; }}
+    h1, h2 {{ font-size: 1.4rem; }}
+    h2 {{ font-size: 1.15rem; }}
+    p {{ line-height: 1.5; }}
+    code {{ background: #f6f8fa; padding: 0.1rem 0.3rem; border-radius: 3px; }}
+    textarea {{ width: 100%; min-height: 240px; font-family: ui-monospace, monospace; font-size: 13px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }}
+    .btn {{ display: inline-block; padding: 0.5rem 1rem; background: #f6f8fa; color: #24292f; border: 1px solid #d0d7de; border-radius: 6px; cursor: pointer; font-size: 0.95rem; margin-right: 8px; text-decoration: none; }}
+    .btn:hover {{ background: #eaeef2; }}
+    .btn--primary {{ background: #2da44e; color: #fff; border-color: #2a8c44; }}
+    .btn--primary:hover {{ background: #2a8c44; }}
+    .btn--primary:disabled {{ opacity: 0.5; cursor: not-allowed; }}
+    table td {{ padding: 4px 8px; border-bottom: 1px solid #eee; }}
+    .templates a {{ margin-right: 0.6rem; }}
+  </style>
+</head>
+<body>
+  <p><a href="/admin/">← к админке</a></p>
+  <h1>Импорт соответствий из CSV</h1>
+  <p>Принимает CSV-таблицу со столбцами:
+     <code>oracle_id, plant_slug, matcher_type, matcher_from/_to/_sign/_number/_color/_name, weight, role, reason_for_expert, reason_for_client, sort_order</code>.</p>
+  <p>Парсер сверяет с БД по ключу <em>(oracle_id, plant_slug, matcher)</em>:
+     совпадения с такими же атрибутами — пропускает, с разными — обновляет, новых — добавляет.
+     Ошибочные строки не блокируют импорт остальных, но придётся исправить и перезапустить.</p>
+
+  <div class="templates" style="margin: 0.5rem 0 1rem;">
+    <strong>Шаблоны для скачивания:</strong>
+    <a class="btn" href="/admin/csv-import?template=druid_tree">druid_tree</a>
+    <a class="btn" href="/admin/csv-import?template=zodiac">zodiac</a>
+    <a class="btn" href="/admin/csv-import?template=numerology">numerology</a>
+    <a class="btn" href="/admin/csv-import?template=eye_color">eye_color</a>
+    <a class="btn" href="/admin/csv-import?template=name">name</a>
+    <a class="btn" href="/admin/csv-import?template=all">все типы</a>
+  </div>
+
+  <form method="post" action="/admin/csv-import">
+    <input type="hidden" name="action" value="preview"/>
+    <textarea name="csv_text" placeholder="вставь сюда содержимое CSV…">{safe_csv}</textarea>
+    <div style="margin-top:0.8rem;">
+      <button class="btn btn--primary" type="submit">Просмотреть изменения</button>
+    </div>
+  </form>
+  {rows_html}
+  {committed_html}
+  {error_html}
+</body>
+</html>"""
+
+
+class CsvImportView(BaseView):
+    name = "Импорт CSV"
+    icon = "fa-solid fa-file-import"
+    identity = "csv-import"
+
+    @expose("/csv-import", methods=["GET", "POST"])
+    async def csv_import(self, request: Request) -> Response:
+        if request.method == "GET":
+            template = request.query_params.get("template")
+            if template:
+                oid = None if template == "all" else template
+                body = csv_import.template_csv(oid)
+                filename = f"{template}.csv" if template else "template.csv"
+                return Response(
+                    body,
+                    media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+                )
+            return HTMLResponse(_render_csv_import_page())
+
+        form = await request.form()
+        action = form.get("action") or "preview"
+        csv_text = (form.get("csv_text") or "").strip()
+        if not csv_text:
+            return HTMLResponse(_render_csv_import_page(error="Пустой CSV. Вставь данные и нажми «Просмотреть»."))
+
+        try:
+            with SessionLocal() as session:
+                rows, counts = csv_import.preview(session, csv_text)
+                if action == "commit":
+                    if counts["error"] > 0:
+                        return HTMLResponse(_render_csv_import_page(
+                            csv_text=csv_text, rows=rows, counts=counts,
+                            error="В CSV есть ошибки — сначала исправь их.",
+                        ))
+                    committed = csv_import.commit(session, rows)
+                    return HTMLResponse(_render_csv_import_page(committed=committed))
+                return HTMLResponse(_render_csv_import_page(csv_text=csv_text, rows=rows, counts=counts))
+        except Exception as e:
+            return HTMLResponse(_render_csv_import_page(csv_text=csv_text, error=str(e)), status_code=500)
+
+
 def setup_admin(app, engine) -> Admin:
     admin = Admin(app, engine, title="Vlad rev1 — админка")
     admin.add_view(PersonAdmin)
@@ -436,4 +648,5 @@ def setup_admin(app, engine) -> Admin:
     admin.add_view(RecommendationAdmin)
     admin.add_view(NatalChartAdmin)
     admin.add_base_view(SeedDumpView)
+    admin.add_base_view(CsvImportView)
     return admin

@@ -103,6 +103,7 @@ export interface RecommendationOut {
   curated_pool: CuratedItem[] | null
   title_plant_slug: string | null
   expert_notes: string | null
+  share_token: string | null
   created_at: string
   updated_at: string
 }
@@ -168,11 +169,17 @@ export const useApi = () => {
     getRecommendationVersion: (personId: number, recId: number) =>
       $fetch<RecommendationOut>(url(`/persons/${personId}/recommendations/${recId}`)),
 
+    // публичный лист по shareable-токену (A8)
+    getLeaf: (token: string) =>
+      $fetch<RecommendationOut>(url(`/leaf/${token}`)),
+
     // геокодинг места рождения (F1)
     searchPlaces: (q: string, limit = 5) =>
       $fetch<GeocodeCandidate[]>(url(`/geocode/?q=${encodeURIComponent(q)}&limit=${limit}`)),
 
-    // PDF — собираем url, чтобы фронт открывал в новой вкладке (нет смысла тащить blob)
-    reportPdfUrl: (personId: number) => url(`/reports/${personId}.pdf`),
+    // PDF — собираем url, чтобы фронт открывал в новой вкладке (нет смысла тащить blob).
+    // Всегда берём public base (даже при SSR-вызове), потому что href будет кликаться в браузере,
+    // а http://api:8000 из docker-сети недоступен снаружи.
+    reportPdfUrl: (personId: number) => `${config.public.apiBase}/reports/${personId}.pdf`,
   }
 }

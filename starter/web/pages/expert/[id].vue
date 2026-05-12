@@ -133,6 +133,15 @@ const fullName = computed(() => {
 })
 const firstName = computed(() => person.value?.first_name || '—')
 const curatedCount = computed(() => curated.value.size)
+
+const electaList = computed(() => {
+  if (!result.value) return []
+  return result.value.pool.filter(p => curated.value.has(p.plant_slug))
+})
+const silvaList = computed(() => {
+  if (!result.value) return []
+  return result.value.pool.filter(p => !curated.value.has(p.plant_slug))
+})
 </script>
 
 <template>
@@ -185,21 +194,52 @@ const curatedCount = computed(() => curated.value.size)
               ни один оракул не дал голоса. проверьте дату рождения или фильтры.
             </div>
 
-            <div v-else-if="result">
-              <PlantCard
-                v-for="(entry, i) in result.pool"
-                :key="entry.plant_slug"
-                :entry="entry"
-                :index="i"
-                curatable
-                :curated="curated.has(entry.plant_slug)"
-                :is-title="titleSlug === entry.plant_slug"
-                :curated-note="curated.get(entry.plant_slug) ?? null"
-                @toggle-curated="toggleCurated"
-                @set-title="setTitle"
-                @update-note="updateNote"
-              />
-            </div>
+            <template v-else-if="result">
+              <section class="section section--electa">
+                <header class="section__head">
+                  <div class="section__eyebrow">electa</div>
+                  <h3 class="section__title">Избранные</h3>
+                  <div class="section__hint">с&nbsp;заметкой эксперта — пойдут в&nbsp;лист гостьи и&nbsp;PDF</div>
+                </header>
+                <div v-if="electaList.length === 0" class="section__empty">
+                  ещё ни&nbsp;одного. отметьте чекбоксом «в&nbsp;избранное» на&nbsp;карточке ниже.
+                </div>
+                <PlantCard
+                  v-for="(entry, i) in electaList"
+                  :key="entry.plant_slug"
+                  :entry="entry"
+                  :index="i"
+                  curatable
+                  :curated="true"
+                  :is-title="titleSlug === entry.plant_slug"
+                  :curated-note="curated.get(entry.plant_slug) ?? null"
+                  @toggle-curated="toggleCurated"
+                  @set-title="setTitle"
+                  @update-note="updateNote"
+                />
+              </section>
+
+              <section v-if="silvaList.length" class="section section--silva">
+                <header class="section__head">
+                  <div class="section__eyebrow">silva</div>
+                  <h3 class="section__title">Резерв</h3>
+                  <div class="section__hint">остальной пул, отсортирован по&nbsp;весу</div>
+                </header>
+                <PlantCard
+                  v-for="(entry, i) in silvaList"
+                  :key="entry.plant_slug"
+                  :entry="entry"
+                  :index="electaList.length + i"
+                  curatable
+                  :curated="false"
+                  :is-title="false"
+                  :curated-note="null"
+                  @toggle-curated="toggleCurated"
+                  @set-title="setTitle"
+                  @update-note="updateNote"
+                />
+              </section>
+            </template>
           </section>
 
           <!-- side -->
@@ -405,6 +445,59 @@ const curatedCount = computed(() => curated.value.size)
   padding: 24px 0;
 }
 .error { color: var(--terra); }
+
+.section { margin-top: 18px; }
+.section:first-of-type { margin-top: 8px; }
+.section__head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 12px;
+  border-top: 1px solid var(--rule);
+  padding-top: 10px;
+  margin-bottom: 10px;
+}
+.section--electa .section__head { border-top: 2px solid var(--terra); }
+.section__eyebrow {
+  grid-row: 1;
+  grid-column: 1;
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: 9px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--terra);
+}
+.section__title {
+  grid-row: 2;
+  grid-column: 1;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 22px;
+  line-height: 1;
+  margin: 4px 0 0;
+  color: var(--ink);
+}
+.section__hint {
+  grid-row: 1 / 3;
+  grid-column: 2;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-faded);
+  text-align: right;
+  max-width: 220px;
+  align-self: end;
+}
+.section__empty {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--ink-faded);
+  padding: 12px 14px;
+  background: var(--paper-deep);
+  border-left: 2px dotted var(--rule);
+}
 
 .aside__eyebrow {
   font-family: var(--serif);

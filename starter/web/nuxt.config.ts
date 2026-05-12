@@ -1,7 +1,7 @@
 // nuxt.config.ts
 export default defineNuxtConfig({
   compatibilityDate: '2025-01-01',
-  devtools: { enabled: true },
+  devtools: { enabled: false },
 
   runtimeConfig: {
     apiBaseServer: process.env.NUXT_API_BASE_SERVER || 'http://api:8000',

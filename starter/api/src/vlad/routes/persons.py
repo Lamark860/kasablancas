@@ -1,4 +1,6 @@
 """CRUD для Person + Recommendation (куратор-режим эксперта)."""
+import secrets
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -102,11 +104,16 @@ def save_recommendation(
         curated_pool=[item.model_dump() for item in (payload.curated or [])],
         title_plant_slug=payload.title_plant_slug,
         expert_notes=payload.expert_notes,
+        # 32 байта url-safe ≈ 43 символа — coллизия практически нулевая,
+        # secret держится дольше чем срок жизни ссылки на лист.
+        share_token=secrets.token_urlsafe(32),
     )
     db.add(rec)
     db.commit()
     db.refresh(rec)
     return rec
+
+
 
 
 @router.get("/{person_id}/recommendation", response_model=RecommendationOut)

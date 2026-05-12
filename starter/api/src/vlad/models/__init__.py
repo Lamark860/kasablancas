@@ -243,6 +243,11 @@ class Recommendation(TimestampMixin, Base):
 
     title_plant_slug: Mapped[str | None] = mapped_column(ForeignKey("plants.slug"))
 
+    # Shareable публичная ссылка на лист гостьи — генерируется при PUT,
+    # уникальная и непредсказуемая (secrets.token_urlsafe). Используется
+    # на роуте GET /leaf/{token} без авторизации.
+    share_token: Mapped[str | None] = mapped_column(String(48), unique=True)
+
     person: Mapped["Person"] = relationship(back_populates="recommendations")
 
     __table_args__ = (Index("idx_recommendations_person", "person_id"),)

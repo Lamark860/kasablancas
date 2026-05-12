@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from vlad.admin import setup_admin
 from vlad.config import settings
 from vlad.db import engine
-from vlad.routes import geocode, oracles, persons, plants, recommend, reports
+from vlad.routes import geocode, leaf, oracles, persons, plants, recommend, reports
 
 # Регистрация ORM в Base.metadata. Тревога — sqladmin без этого импорта
 # не увидит модели; alembic тоже импортирует vlad.models в env.py.
@@ -31,6 +31,7 @@ app.include_router(oracles.router, prefix="/oracles", tags=["oracles"])
 app.include_router(recommend.router, prefix="/recommend", tags=["recommend"])
 app.include_router(reports.router, prefix="/reports", tags=["reports"])
 app.include_router(geocode.router, prefix="/geocode", tags=["geocode"])
+app.include_router(leaf.router, prefix="/leaf", tags=["leaf"])
 
 setup_admin(app, engine)
 

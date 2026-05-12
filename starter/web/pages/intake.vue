@@ -227,14 +227,25 @@ async function submit() {
                   v-for="(c, i) in geoCandidates"
                   :key="`${c.lat}-${c.lon}`"
                   class="place__candidate"
+                  :title="c.label || form.birth_place"
                 >
                   <input
                     type="radio"
                     :value="i"
                     v-model="geoSelectedIdx"
                   />
-                  <span class="place__candidate-label">{{ c.label || form.birth_place }}</span>
-                  <span class="place__candidate-coords">{{ fmtCoords(c) }}</span>
+                  <div class="place__candidate-body">
+                    <div class="place__candidate-head">
+                      {{ (c.label || form.birth_place).split(',')[0] }}
+                    </div>
+                    <div
+                      v-if="(c.label || '').includes(',')"
+                      class="place__candidate-tail"
+                    >
+                      {{ (c.label || '').split(',').slice(1).join(',').trim() }}
+                    </div>
+                    <div class="place__candidate-coords">{{ fmtCoords(c) }}</div>
+                  </div>
                 </label>
               </div>
 
@@ -459,23 +470,45 @@ async function submit() {
 }
 .place__candidate {
   display: grid;
-  grid-template-columns: 18px 1fr auto;
+  grid-template-columns: 18px 1fr;
   gap: 8px;
-  align-items: baseline;
-  padding: 4px 0;
+  align-items: start;
+  padding: 6px 0;
   border-bottom: 1px dotted var(--rule);
   cursor: pointer;
 }
 .place__candidate:last-child { border-bottom: none; }
-.place__candidate-label {
+.place__candidate > input[type="radio"] {
+  margin-top: 4px;
+}
+.place__candidate-body {
+  min-width: 0;
+}
+.place__candidate-head {
   font-family: var(--serif);
   font-size: 14px;
   color: var(--ink);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.place__candidate-tail {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 12px;
+  color: var(--ink-faded);
+  line-height: 1.3;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .place__candidate-coords {
   font-family: var(--sans);
-  font-size: 11px;
+  font-size: 10px;
+  letter-spacing: 0.04em;
   color: var(--ink-faded);
-  white-space: nowrap;
+  margin-top: 3px;
 }
 </style>
