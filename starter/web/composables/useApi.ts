@@ -145,11 +145,14 @@ export const useApi = () => {
     deletePerson: (id: number) => $fetch(url(`/persons/${id}`), { method: 'DELETE' }),
 
     // recommend
-    recommend: (personId: number, applyFilters = true) =>
-      $fetch<RecommendOutput>(url(`/recommend/?apply_filters=${applyFilters}`), {
+    recommend: (personId: number, applyFilters = true, disabledOracles: string[] = []) => {
+      const q = new URLSearchParams({ apply_filters: String(applyFilters) })
+      if (disabledOracles.length) q.set('disabled', disabledOracles.join(','))
+      return $fetch<RecommendOutput>(url(`/recommend/?${q}`), {
         method: 'POST',
         body: { person_id: personId },
-      }),
+      })
+    },
 
     // oracles
     listOracles: () => $fetch<OracleInfo[]>(url('/oracles/')),

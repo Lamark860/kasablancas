@@ -104,9 +104,10 @@ def save_recommendation(
         curated_pool=[item.model_dump() for item in (payload.curated or [])],
         title_plant_slug=payload.title_plant_slug,
         expert_notes=payload.expert_notes,
-        # 32 байта url-safe ≈ 43 символа — coллизия практически нулевая,
-        # secret держится дольше чем срок жизни ссылки на лист.
-        share_token=secrets.token_urlsafe(32),
+        # 16 байт url-safe → 22 символа (~128 бит энтропии). Стандарт для
+        # неотзываемых публичных токенов: коллизия исчезающе мала, ссылка
+        # короче и читабельнее в мессенджерах.
+        share_token=secrets.token_urlsafe(16),
     )
     db.add(rec)
     db.commit()

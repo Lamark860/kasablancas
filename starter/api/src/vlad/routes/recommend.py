@@ -19,11 +19,16 @@ router = APIRouter()
 def recommend(
     payload: RecommendInput,
     apply_filters: bool = True,
+    disabled: str | None = None,
     db: Session = Depends(get_db),
 ):
     """Главный эндпоинт. По умолчанию пул фильтруется (USDA, sun, soil,
     дерево-враг, is_weed_like). `?apply_filters=false` — эксперт смотрит «сырой»
     пул со всем, что выпало по символическим системам.
+
+    `?disabled=oracle_a,oracle_b` — временно выключить оракулы в UI
+    (fontes-тогглы), не трогая Oracle.active в БД. Удобно для исследования
+    «а что если без славянского?».
     """
     if payload.person_id is not None:
         person = db.get(Person, payload.person_id)
@@ -34,4 +39,9 @@ def recommend(
         # к атрибутам объекта и читают из БД свои entries
         person = Person(**payload.person.model_dump(exclude_unset=False))
 
-    return run_orchestrator(person, db, apply_filters_flag=apply_filters)
+    disabled_oracles = {s.strip() for s in (disabled or "").split(",") if s.strip()}
+    return run_orchestrator(
+        person, db,
+        apply_filters_flag=apply_filters,
+        disabled_oracles=disabled_oracles,
+    )

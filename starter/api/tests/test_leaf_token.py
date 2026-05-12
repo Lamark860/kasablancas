@@ -22,8 +22,8 @@ def test_put_recommendation_generates_share_token(client, seeded_session):
     assert r.status_code == 200
     d = r.json()
     assert d["share_token"]
-    # 32 байта url-safe → 43 символа
-    assert 40 <= len(d["share_token"]) <= 48
+    # 16 байт url-safe → 22 символа (~128 бит энтропии)
+    assert 20 <= len(d["share_token"]) <= 26
 
 
 def test_two_versions_get_different_tokens(client, seeded_session):

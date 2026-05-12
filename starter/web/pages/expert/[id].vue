@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Person, RecommendOutput, RecommendationOut, RecommendationSummary } from '~/composables/useApi'
+import type { OracleInfo, Person, RecommendOutput, RecommendationOut, RecommendationSummary } from '~/composables/useApi'
 
 const route = useRoute()
 const router = useRouter()
@@ -7,6 +7,8 @@ const api = useApi()
 
 const personId = computed(() => Number(route.params.id))
 const applyFilters = ref(true)
+const disabledOracles = ref<Set<string>>(new Set())
+const disabledKey = computed(() => Array.from(disabledOracles.value).sort().join(','))
 
 const { data: person, error: personError } = await useAsyncData<Person>(
   () => `person-${personId.value}`,
@@ -15,10 +17,33 @@ const { data: person, error: personError } = await useAsyncData<Person>(
 )
 
 const { data: result, pending, refresh, error: recError } = await useAsyncData<RecommendOutput>(
-  () => `rec-${personId.value}-${applyFilters.value}`,
-  () => api.recommend(personId.value, applyFilters.value),
-  { watch: [personId, applyFilters] },
+  () => `rec-${personId.value}-${applyFilters.value}-${disabledKey.value}`,
+  () => api.recommend(personId.value, applyFilters.value, Array.from(disabledOracles.value)),
+  { watch: [personId, applyFilters, disabledKey] },
 )
+
+// Полный список оракулов из БД (включая выключенные active=0) — нужен для
+// рендера fontes-сайдбара с чекбоксами всех источников.
+const { data: allOracles } = await useAsyncData<OracleInfo[]>(
+  'oracles',
+  () => api.listOracles(),
+)
+
+// Курсивная вспышка «свод пересчитан…» при изменении набора оракулов
+const recomputeFlash = ref(false)
+let flashTimer: ReturnType<typeof setTimeout> | null = null
+watch(disabledKey, () => {
+  recomputeFlash.value = true
+  if (flashTimer) clearTimeout(flashTimer)
+  flashTimer = setTimeout(() => (recomputeFlash.value = false), 1400)
+})
+
+function toggleOracleDisabled(oracleId: string) {
+  const next = new Set(disabledOracles.value)
+  if (next.has(oracleId)) next.delete(oracleId)
+  else next.add(oracleId)
+  disabledOracles.value = next
+}
 
 // Подтягиваем сохранённую кураторскую сборку (если есть). 404 — нормально.
 const saved = ref<RecommendationOut | null>(null)
@@ -142,6 +167,32 @@ const silvaList = computed(() => {
   if (!result.value) return []
   return result.value.pool.filter(p => !curated.value.has(p.plant_slug))
 })
+
+// При включённом фильтре запоминаем slug → reason для исключённых, чтобы
+// при выключении подсветить добавленные карточки золотой рамкой + ❋ tooltip.
+const lastExcludedBySlug = ref<Map<string, string>>(new Map())
+watch(result, (r) => {
+  if (r && r.filters_applied) {
+    const m = new Map<string, string>()
+    for (const ex of r.excluded || []) m.set(ex.plant_slug, ex.reason)
+    lastExcludedBySlug.value = m
+  }
+}, { immediate: true })
+
+const lastExcludedCount = computed(() => lastExcludedBySlug.value.size)
+
+function frostReasonFor(slug: string): string | null {
+  // только USDA-причина даёт маркер ❋ «не зимует». Дерево-врага и weed-понижение
+  // не про мороз и в маркер не идут.
+  const r = lastExcludedBySlug.value.get(slug)
+  if (!r) return null
+  return /USDA/i.test(r) ? r : null
+}
+
+function isNew(slug: string): boolean {
+  // «новая» = была бы скрыта фильтром, но фильтр сейчас снят
+  return !!result.value && !result.value.filters_applied && lastExcludedBySlug.value.has(slug)
+}
 </script>
 
 <template>
@@ -195,6 +246,29 @@ const silvaList = computed(() => {
             </div>
 
             <template v-else-if="result">
+              <div class="filter-state" :class="{ 'filter-state--off': !result.filters_applied }">
+                <div class="filter-state__main">
+                  <span class="filter-state__label">
+                    {{ result.filters_applied ? 'свод отфильтрован под участок' : 'свод показан как есть' }}
+                  </span>
+                  <span class="filter-state__num">
+                    <template v-if="result.filters_applied">
+                      <template v-if="(result.excluded?.length ?? 0) > 0">скрыто {{ result.excluded.length }}</template>
+                      <template v-else>исключений нет</template>
+                    </template>
+                    <template v-else-if="lastExcludedCount > 0">+{{ lastExcludedCount }} за пределами зоны</template>
+                    <template v-else>сырой пул</template>
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  class="filter-state__toggle"
+                  @click="applyFilters = !applyFilters"
+                >
+                  {{ result.filters_applied ? 'снять фильтр' : '↺ вернуть фильтр' }}
+                </button>
+              </div>
+
               <section class="section section--electa">
                 <header class="section__head">
                   <div class="section__eyebrow">electa</div>
@@ -213,6 +287,8 @@ const silvaList = computed(() => {
                   :curated="true"
                   :is-title="titleSlug === entry.plant_slug"
                   :curated-note="curated.get(entry.plant_slug) ?? null"
+                  :is-new="isNew(entry.plant_slug)"
+                  :frost-reason="frostReasonFor(entry.plant_slug)"
                   @toggle-curated="toggleCurated"
                   @set-title="setTitle"
                   @update-note="updateNote"
@@ -234,6 +310,8 @@ const silvaList = computed(() => {
                   :curated="false"
                   :is-title="false"
                   :curated-note="null"
+                  :is-new="isNew(entry.plant_slug)"
+                  :frost-reason="frostReasonFor(entry.plant_slug)"
                   @toggle-curated="toggleCurated"
                   @set-title="setTitle"
                   @update-note="updateNote"
@@ -300,32 +378,34 @@ const silvaList = computed(() => {
               </ul>
             </div>
 
-            <div class="v-aside">
+            <div class="v-aside fontes">
               <div class="aside__eyebrow">fontes</div>
               <div class="aside__title">Источники</div>
               <ul class="oracle-list">
                 <li
-                  v-for="(o, i) in result.active_oracles"
-                  :key="o"
-                  :class="{ 'oracle-list__row--last': i === result.active_oracles.length - 1 }"
+                  v-for="o in allOracles || []"
+                  :key="o.id"
+                  class="oracle-list__row"
+                  :class="{
+                    'oracle-list__row--disabled': disabledOracles.has(o.id) || !o.active || !o.implemented,
+                  }"
                 >
-                  <span>{{ o }}</span><span class="oracle-list__check">✓</span>
+                  <label class="oracle-list__label">
+                    <input
+                      type="checkbox"
+                      :checked="!disabledOracles.has(o.id) && o.active && o.implemented"
+                      :disabled="!o.implemented || !o.active"
+                      @change="toggleOracleDisabled(o.id)"
+                    />
+                    <span class="oracle-list__name">{{ o.id }}</span>
+                  </label>
+                  <span v-if="!o.implemented" class="oracle-list__status" title="оракул в роадмапе, ещё не написан">⏸</span>
+                  <span v-else-if="!o.active" class="oracle-list__status" title="отключён в БД через oracles.active=0">×</span>
                 </li>
               </ul>
-            </div>
-
-            <div class="v-aside v-aside--soft filters">
-              <div class="aside__eyebrow">filtra</div>
-              <div class="aside__title">Фильтры</div>
-              <label class="filters__toggle">
-                <input type="checkbox" v-model="applyFilters" />
-                <span>учитывать USDA-зону, дерево-врага, sun/soil</span>
-              </label>
-              <div class="filters__hint">
-                {{ result.filters_applied
-                  ? 'пул отфильтрован под участок'
-                  : 'показан сырой пул, как есть' }}
-              </div>
+              <transition name="fontes-flash">
+                <div v-if="recomputeFlash" class="fontes__flash">свод пересчитан…</div>
+              </transition>
             </div>
 
             <div v-if="result.excluded.length" class="v-aside v-aside--soft excluded">
@@ -335,6 +415,12 @@ const silvaList = computed(() => {
                 <div class="excluded__name">{{ ex.plant_slug }}</div>
                 <div class="excluded__reason">{{ ex.reason }}</div>
               </div>
+              <button
+                type="button"
+                class="excluded__restore"
+                @click="applyFilters = false"
+                title="снять фильтр целиком — вернуть все исключённые в свод"
+              >↺ вернуть все</button>
             </div>
           </aside>
         </div>
@@ -445,6 +531,54 @@ const silvaList = computed(() => {
   padding: 24px 0;
 }
 .error { color: var(--terra); }
+
+.filter-state {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 14px;
+  margin: 0 0 6px;
+  border-left: 4px solid var(--terra);
+  background: rgba(139, 58, 31, 0.06);
+}
+.filter-state--off {
+  border-left-color: var(--gold, #b08d44);
+  background: rgba(176, 141, 68, 0.12);
+}
+.filter-state__main {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.filter-state__label {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--ink);
+}
+.filter-state__num {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--terra);
+}
+.filter-state--off .filter-state__num { color: #7a5e22; }
+.filter-state__toggle {
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  padding: 6px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.filter-state__toggle:hover { border-color: var(--ink); }
 
 .section { margin-top: 18px; }
 .section:first-of-type { margin-top: 8px; }
@@ -568,20 +702,52 @@ const silvaList = computed(() => {
 }
 
 .oracle-list { list-style: none; margin: 0; padding: 0; }
-.oracle-list li {
+.oracle-list__row {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   padding: 4px 0;
   font-family: var(--serif);
   font-size: 14px;
   border-bottom: 1px dotted var(--rule);
 }
-.oracle-list li.oracle-list__row--last { border-bottom: none; }
-.oracle-list__check {
-  color: var(--terra);
-  font-family: var(--sans);
-  font-size: 13px;
+.oracle-list__row:last-child { border-bottom: none; }
+.oracle-list__row--disabled .oracle-list__name {
+  color: var(--ink-faded);
+  text-decoration: line-through;
+  text-decoration-color: var(--rule);
 }
+.oracle-list__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  flex: 1;
+}
+.oracle-list__label input { cursor: inherit; }
+.oracle-list__label input:disabled { cursor: not-allowed; }
+.oracle-list__name { font-family: var(--serif); }
+.oracle-list__status {
+  font-family: var(--sans);
+  font-size: 11px;
+  color: var(--ink-faded);
+  cursor: help;
+}
+
+.fontes { position: relative; }
+.fontes__flash {
+  margin-top: 10px;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--terra);
+}
+.fontes-flash-enter-active,
+.fontes-flash-leave-active {
+  transition: opacity 0.4s ease;
+}
+.fontes-flash-enter-from,
+.fontes-flash-leave-to { opacity: 0; }
 
 .filters__toggle {
   display: flex;
@@ -675,6 +841,20 @@ const silvaList = computed(() => {
   color: var(--ink-faded);
   margin-top: 2px;
 }
+.excluded__restore {
+  margin-top: 10px;
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--terra);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.excluded__restore:hover { color: var(--ink); }
 
 .footer {
   display: flex;

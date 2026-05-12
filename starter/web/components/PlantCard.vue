@@ -8,6 +8,10 @@ const props = defineProps<{
   curated?: boolean
   isTitle?: boolean
   curatedNote?: string | null
+  /** «новая» — при снятом фильтре карточка из ранее исключённых; золотая рамка. */
+  isNew?: boolean
+  /** Причина зимовки (например «min USDA 6 > участка 5»); рисует маркер ❋. */
+  frostReason?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -25,7 +29,16 @@ const weightFmt = computed(() => props.entry.total_weight.toFixed(2))
 </script>
 
 <template>
-  <article class="plant-card" :class="{ 'plant-card--curated': curated, 'plant-card--title': isTitle }">
+  <article
+    class="plant-card"
+    :class="{
+      'plant-card--curated': curated,
+      'plant-card--title': isTitle,
+      'plant-card--new': isNew,
+    }"
+  >
+    <div v-if="isTitle" class="plant-card__princeps">arbor princeps</div>
+    <div v-if="isNew" class="plant-card__new-badge">+ за пределами зоны</div>
     <div class="plant-card__icon" aria-hidden="true">
       <svg viewBox="0 0 56 56" width="48" height="48">
         <circle cx="28" cy="28" r="22" fill="none" stroke="currentColor" stroke-width="1" />
@@ -36,6 +49,11 @@ const weightFmt = computed(() => props.entry.total_weight.toFixed(2))
     <div class="plant-card__body">
       <header class="plant-card__head">
         <span class="plant-card__num">{{ numLabel }}</span>
+        <span
+          v-if="frostReason"
+          class="plant-card__frost"
+          :title="`не зимует — ${frostReason}`"
+        >❋</span>
         <span class="plant-card__name">{{ entry.plant_name_ru || entry.plant_slug }}</span>
         <span class="plant-card__slug">{{ entry.plant_slug }}</span>
       </header>
@@ -61,11 +79,13 @@ const weightFmt = computed(() => props.entry.total_weight.toFixed(2))
     </div>
 
     <aside class="plant-card__score">
-      <div class="plant-card__stars" aria-hidden="true">
-        <span v-for="i in entry.match_count" :key="i">✦</span>
+      <div
+        class="plant-card__diamonds"
+        aria-hidden="true"
+        :title="`${entry.match_count} пересечение(й)`"
+      >
+        <span v-for="i in Math.min(entry.match_count, 6)" :key="i">◆</span>
       </div>
-      <div class="plant-card__count">{{ entry.match_count }}</div>
-      <div class="plant-card__count-label">пересеч.</div>
       <div class="plant-card__weight" :title="`total_weight = ${entry.total_weight}`">
         вес <strong>{{ weightFmt }}</strong>
       </div>
@@ -211,33 +231,18 @@ const weightFmt = computed(() => props.entry.total_weight.toFixed(2))
 .plant-card__score {
   text-align: right;
 }
-.plant-card__stars {
+.plant-card__diamonds {
   color: var(--terra);
-  font-family: var(--display);
-  font-size: 16px;
-  letter-spacing: 1px;
-}
-.plant-card__count {
-  font-family: var(--display);
-  font-size: 36px;
-  color: var(--ink);
-  margin-top: 4px;
-}
-.plant-card__count-label {
-  font-family: var(--sans);
-  font-weight: 500;
-  font-size: 8px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--ink-faded);
-  margin-top: 2px;
+  font-size: 18px;
+  letter-spacing: 2px;
+  line-height: 1;
 }
 .plant-card__weight {
   font-family: var(--serif);
   font-style: italic;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--ink-faded);
-  margin-top: 8px;
+  margin-top: 6px;
 }
 .plant-card__weight strong {
   font-style: normal;
@@ -250,8 +255,46 @@ const weightFmt = computed(() => props.entry.total_weight.toFixed(2))
   padding: 18px 10px;
 }
 .plant-card--title {
-  border-left: 3px solid var(--terra);
-  padding-left: 10px;
+  border: 1.5px solid var(--terra);
+  padding: 16px 10px;
+  position: relative;
+}
+.plant-card__princeps {
+  position: absolute;
+  top: -10px;
+  left: 16px;
+  padding: 1px 8px;
+  background: var(--terra);
+  color: var(--paper);
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: 8px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+}
+
+.plant-card--new {
+  box-shadow: 0 0 0 2px var(--gold-soft, #d4b876);
+  position: relative;
+}
+.plant-card__new-badge {
+  position: absolute;
+  top: -10px;
+  right: 16px;
+  padding: 1px 8px;
+  background: var(--gold, #b08d44);
+  color: var(--paper);
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: 8px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+}
+.plant-card__frost {
+  color: var(--gold, #b08d44);
+  font-size: 14px;
+  cursor: help;
+  margin-right: 4px;
 }
 
 .plant-card__curate {

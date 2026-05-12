@@ -21,7 +21,12 @@ from vlad.models import Plant
 from vlad.oracles import ORACLES
 
 
-def recommend(person, db: Session, apply_filters_flag: bool = True) -> dict[str, Any]:
+def recommend(
+    person,
+    db: Session,
+    apply_filters_flag: bool = True,
+    disabled_oracles: set[str] | None = None,
+) -> dict[str, Any]:
     """Главная функция: Person → пул растений-кандидатов с источниками.
 
     Args:
@@ -30,6 +35,9 @@ def recommend(person, db: Session, apply_filters_flag: bool = True) -> dict[str,
         apply_filters_flag: если True (по умолчанию), пул прогоняется через
             фильтры эксперта (USDA, sun, soil, дерево-враг, is_weed_like).
             False — отдаём «сырой» пул, эксперт хочет видеть всё.
+        disabled_oracles: оракулы, которые эксперт временно выключил в UI
+            (fontes-тогглы). На уровне БД они остаются active=1; здесь
+            пропускаем их при сборке пула, чтобы UI мог делать «что если?».
 
     Возвращает dict, готовый к JSON-сериализации:
         {
@@ -60,9 +68,13 @@ def recommend(person, db: Session, apply_filters_flag: bool = True) -> dict[str,
         }
     )
 
+    disabled = disabled_oracles or set()
     for oracle_id, oracle in ORACLES.items():
         if oracle_id not in active_meta:
             # оракул реализован, но выключен через oracles.active=0
+            continue
+        if oracle_id in disabled:
+            # эксперт выключил оракул через fontes-тоггл — не учитываем
             continue
         oracle_meta = active_meta[oracle_id]
         for r in oracle.run(person, db):
@@ -105,7 +117,7 @@ def recommend(person, db: Session, apply_filters_flag: bool = True) -> dict[str,
         excluded = [{"plant_slug": e.plant_slug, "reason": e.reason} for e in exclusions]
 
     return {
-        "active_oracles": sorted(active_meta.keys()),
+        "active_oracles": sorted(active_meta.keys() - disabled),
         "pool": sorted_pool,
         "filters_applied": apply_filters_flag,
         "excluded": excluded,
