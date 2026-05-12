@@ -1,0 +1,1270 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Hortus Animæ — Prototype v2 — Свод растений</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+DW+Pica:ital@0;1&family=IM+Fell+DW+Pica+SC&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<style>
+:root {
+  --paper:        #f1e8d0;
+  --paper-warm:   #ebe0c2;
+  --paper-deep:   #e3d5ad;
+  --ink:          #2d2218;
+  --ink-soft:     #4a3a28;
+  --ink-faded:    #6b5a44;
+  --terra:        #8b3a1f;
+  --terra-deep:   #6e2c15;
+  --gold:         #b08d44;
+  --gold-soft:    #d4b876;
+  --rule:         #a89a78;
+  --rule-soft:    #c5b896;
+  --red-mark:     #8b1f1f;
+
+  --serif:   'IM Fell DW Pica', 'Cormorant Garamond', Georgia, serif;
+  --serif-it:'IM Fell DW Pica', 'Cormorant Garamond', Georgia, serif;
+  --sc:      'IM Fell DW Pica SC', 'Cormorant Garamond', Georgia, serif;
+  --body:    'Cormorant Garamond', Georgia, serif;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 17px;
+  line-height: 1.45;
+  /* paper texture via subtle noise */
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(139,58,31,0.04) 0, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(176,141,68,0.05) 0, transparent 50%);
+}
+
+a { color: inherit; }
+button { font-family: inherit; cursor: pointer; }
+
+/* — Page shell — */
+.page {
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 32px 48px 80px;
+}
+
+.masthead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  border-bottom: 1px double var(--rule);
+  padding-bottom: 14px;
+  margin-bottom: 24px;
+}
+.brand {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 38px;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+.brand .amp { color: var(--terra); }
+.masthead .meta {
+  font-family: var(--sc);
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  color: var(--ink-soft);
+  text-align: right;
+}
+
+/* — Guest banner — */
+.guest-bar {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 24px;
+  align-items: center;
+  padding: 14px 18px;
+  background: var(--paper-warm);
+  border: 1px solid var(--rule-soft);
+  border-radius: 2px;
+  margin-bottom: 28px;
+}
+.guest-mono {
+  width: 56px; height: 56px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-family: var(--serif);
+  font-size: 28px;
+}
+.guest-name { font-family: var(--serif); font-size: 26px; line-height: 1.15; }
+.guest-name .sub { font-size: 14px; color: var(--ink-faded); font-style: italic; display: block; margin-top: 2px; }
+.guest-stamps {
+  font-family: var(--sc);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: var(--ink-soft);
+  text-align: right;
+  line-height: 1.6;
+}
+.guest-stamps b { color: var(--terra); font-weight: 600; }
+
+/* — Layout: three columns — */
+.layout {
+  display: grid;
+  grid-template-columns: 240px 1fr 240px;
+  gap: 28px;
+  align-items: flex-start;
+}
+
+aside.col h3 {
+  font-family: var(--sc);
+  font-size: 13px;
+  letter-spacing: 0.22em;
+  font-weight: 500;
+  color: var(--ink-soft);
+  border-bottom: 1px solid var(--rule-soft);
+  padding-bottom: 6px;
+  margin: 0 0 12px;
+}
+aside.col + aside.col, aside.col .group + .group { margin-top: 28px; }
+aside.col .group h3 { margin-top: 0; }
+
+/* — Fontes (oracles toggles) — */
+.fontes ul, .filtra ul, .historiae ul, .exclusi ul {
+  list-style: none; padding: 0; margin: 0;
+}
+.fontes li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px dotted var(--rule-soft);
+  font-family: var(--body);
+  font-size: 15px;
+  cursor: pointer;
+  user-select: none;
+}
+.fontes li:hover { color: var(--terra); }
+.fontes li.off { color: var(--ink-faded); }
+.fontes li.off .name { text-decoration: line-through; text-decoration-color: var(--rule); }
+.fontes .tick {
+  width: 16px; height: 16px;
+  border: 1.5px solid var(--ink-soft);
+  display: inline-grid; place-items: center;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.fontes li.off .tick { border-color: var(--rule); }
+.fontes li.disabled { opacity: 0.45; pointer-events: none; }
+.fontes .count {
+  margin-left: auto;
+  font-family: var(--sc);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--ink-faded);
+}
+.fontes .reset {
+  margin-top: 10px;
+  font-family: var(--sc);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: var(--terra);
+  background: none;
+  border: none;
+  padding: 4px 0;
+  cursor: pointer;
+}
+.fontes .reset:hover { color: var(--terra-deep); text-decoration: underline; }
+
+.recompute-flash {
+  font-family: var(--serif-it);
+  font-style: italic;
+  font-size: 12px;
+  color: var(--terra);
+  padding: 4px 0 0;
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+.recompute-flash.on { opacity: 1; }
+
+/* — Filtra — */
+.filtra .row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 14.5px;
+}
+.filtra .row input { margin-top: 4px; }
+.filtra .row label { cursor: pointer; }
+.filtra .hint { font-family: var(--serif-it); font-style: italic; font-size: 12px; color: var(--ink-faded); display: block; margin-top: 2px; }
+
+/* — Main column — */
+main.col {
+  min-width: 0;
+}
+.folium-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.folium-title {
+  font-family: var(--serif);
+  font-size: 36px;
+  letter-spacing: 0.02em;
+}
+.folium-title em { font-style: italic; color: var(--terra); }
+.folium-page {
+  font-family: var(--sc);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  color: var(--ink-faded);
+}
+.folium-instr {
+  font-family: var(--serif-it);
+  font-style: italic;
+  font-size: 15px;
+  color: var(--ink-soft);
+  border-bottom: 1px solid var(--rule-soft);
+  padding-bottom: 12px;
+  margin-bottom: 22px;
+}
+
+/* — Filter state badge — */
+.filter-state {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  background: var(--paper-warm);
+  border: 1px solid var(--rule-soft);
+  border-left: 3px solid var(--terra);
+  font-family: var(--body);
+  font-size: 14.5px;
+  margin-bottom: 22px;
+}
+.filter-state.off { border-left-color: var(--gold); background: rgba(212,184,118,0.18); }
+.filter-state .num { font-family: var(--serif); font-style: italic; font-size: 18px; color: var(--terra); }
+.filter-state .num.off { color: var(--gold); }
+.filter-state .toggle {
+  margin-left: auto;
+  font-family: var(--sc);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--terra);
+  background: none;
+  border: 1px solid var(--rule);
+  padding: 5px 10px;
+  border-radius: 1px;
+}
+.filter-state .toggle:hover { background: var(--paper); }
+
+/* — Sub-section heads (electa / silva) — */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin: 14px 0 12px;
+  border-bottom: 1px double var(--rule-soft);
+  padding-bottom: 6px;
+}
+.section-head h2 {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 24px;
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+.section-head .lat {
+  font-family: var(--sc);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  color: var(--ink-faded);
+}
+.section-head .right {
+  margin-left: auto;
+  font-family: var(--serif-it);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-faded);
+}
+
+.empty-electa {
+  font-family: var(--serif-it);
+  font-style: italic;
+  color: var(--ink-faded);
+  padding: 14px 18px;
+  border: 1px dashed var(--rule);
+  background: rgba(255,255,255,0.25);
+  font-size: 15px;
+  margin-bottom: 18px;
+}
+
+/* — Plant cards — */
+.plant-grid { display: grid; gap: 10px; margin-bottom: 28px; }
+.plant {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  gap: 16px;
+  align-items: start;
+  padding: 14px 16px;
+  background: rgba(255,255,255,0.35);
+  border: 1px solid var(--rule-soft);
+  border-radius: 2px;
+  position: relative;
+  transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
+}
+.plant.selected {
+  background: rgba(255,255,255,0.55);
+  border-color: var(--ink-soft);
+}
+.plant.primary {
+  border: 2px solid var(--red-mark);
+  background: rgba(255,253,247,0.85);
+}
+.plant.frost {
+  background: rgba(176,141,68,0.10);
+  border-style: dashed;
+}
+.plant.frost.new {
+  /* gold ring on cards that appear when filter is off */
+  box-shadow: 0 0 0 2px var(--gold-soft);
+}
+
+.plant .icon {
+  width: 56px; height: 56px;
+  border: 1px solid var(--rule);
+  display: grid; place-items: center;
+  background: var(--paper);
+  font-family: var(--sc);
+  color: var(--ink-faded);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+}
+.plant .body { min-width: 0; }
+.plant .name {
+  font-family: var(--serif);
+  font-size: 22px;
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+}
+.plant .name em {
+  font-style: italic;
+  color: var(--ink-faded);
+  font-size: 14px;
+  margin-left: 8px;
+  letter-spacing: 0;
+}
+.plant .meta {
+  font-family: var(--sc);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: var(--ink-faded);
+  margin-top: 4px;
+}
+.plant .tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.plant .tag {
+  font-family: var(--body);
+  font-size: 12px;
+  padding: 1px 8px;
+  border-radius: 1px;
+  background: var(--paper-deep);
+  color: var(--ink-soft);
+  border: 1px solid transparent;
+  letter-spacing: 0.02em;
+}
+.plant .tag.druid_tree   { border-color: #6b8e5a; color: #4a6b3c; }
+.plant .tag.druid_flower { border-color: #c97c9b; color: #944f6b; }
+.plant .tag.zodiac       { border-color: #9170b8; color: #614a82; }
+.plant .tag.numerology   { border-color: #b08d44; color: #7a5e22; }
+.plant .tag.eye_color    { border-color: #5d8aa8; color: #3d6580; }
+.plant .tag.name         { border-color: #c08552; color: #8b5a2a; }
+.plant .tag.slavic       { border-color: #a64b2a; color: #7a3520; }
+
+.plant .right {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  padding-top: 2px;
+}
+.plant .gems {
+  font-size: 18px;
+  letter-spacing: 0.1em;
+  color: var(--terra);
+}
+.plant .weight {
+  font-family: var(--sc);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: var(--ink-faded);
+}
+.plant .pick {
+  margin-top: 6px;
+  background: none;
+  border: 1px solid var(--ink-soft);
+  font-family: var(--sc);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  padding: 4px 8px;
+  color: var(--ink-soft);
+}
+.plant.selected .pick {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+.plant .pick:hover { background: var(--paper-deep); }
+.plant.selected .pick:hover { background: var(--ink-soft); }
+
+/* corner marks */
+.plant .corner {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  font-family: var(--sc);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  padding: 3px 7px;
+  background: var(--gold);
+  color: var(--paper);
+  border-bottom-left-radius: 2px;
+}
+.plant .corner.frost {
+  background: transparent;
+  border: 1px solid var(--gold);
+  color: var(--gold-soft);
+  top: 8px; right: 8px;
+  padding: 1px 5px;
+  font-size: 10px;
+}
+.plant .frost-mark {
+  display: inline-block;
+  font-size: 13px;
+  color: var(--gold);
+  margin-left: 8px;
+  vertical-align: 1px;
+}
+
+/* primary badge */
+.plant .primary-mark {
+  position: absolute;
+  top: -10px;
+  left: 14px;
+  background: var(--red-mark);
+  color: var(--paper);
+  font-family: var(--sc);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  padding: 3px 9px;
+}
+
+/* note textarea inside electa cards */
+.note-block {
+  grid-column: 1 / -1;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dotted var(--rule);
+}
+.note-block label {
+  display: block;
+  font-family: var(--sc);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: var(--ink-faded);
+  margin-bottom: 5px;
+}
+.note-block textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 56px;
+  font-family: var(--body);
+  font-size: 15px;
+  font-style: italic;
+  color: var(--ink);
+  background: rgba(255,255,255,0.4);
+  border: 1px solid var(--rule-soft);
+  padding: 8px 10px;
+  border-radius: 1px;
+}
+.note-block textarea:focus { outline: none; border-color: var(--ink-soft); background: rgba(255,255,255,0.7); }
+.note-block .primary-toggle {
+  display: inline-block;
+  margin-top: 8px;
+  font-family: var(--sc);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--ink-faded);
+  background: none;
+  border: 1px solid var(--rule);
+  padding: 4px 9px;
+}
+.note-block .primary-toggle.is-primary {
+  background: var(--red-mark);
+  color: var(--paper);
+  border-color: var(--red-mark);
+}
+
+/* — Right column: exclusi / historiae — */
+.exclusi li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px dotted var(--rule-soft);
+  font-size: 14px;
+}
+.exclusi .why {
+  display: block;
+  font-family: var(--serif-it);
+  font-style: italic;
+  font-size: 12px;
+  color: var(--ink-faded);
+  margin-top: 1px;
+}
+.exclusi .restore {
+  background: none;
+  border: none;
+  font-family: var(--sc);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--terra);
+  padding: 2px 0;
+  align-self: start;
+}
+.exclusi .restore:hover { color: var(--terra-deep); text-decoration: underline; }
+
+/* — Footer actions — */
+.actions {
+  margin-top: 36px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  border-top: 1px double var(--rule);
+  padding-top: 22px;
+}
+.actions .spacer { flex: 1; }
+.btn {
+  font-family: var(--sc);
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  padding: 11px 18px;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 1px;
+}
+.btn:hover { background: var(--ink); color: var(--paper); }
+.btn.primary {
+  background: var(--ink);
+  color: var(--paper);
+}
+.btn.primary:hover { background: var(--terra); border-color: var(--terra); }
+.btn.ghost {
+  background: none;
+  border-color: var(--rule);
+  color: var(--ink-soft);
+}
+.btn.ghost:hover { background: var(--paper-warm); color: var(--ink); }
+
+/* — Bottom: Nominatim pattern reference — */
+.patterns {
+  margin-top: 70px;
+  padding-top: 28px;
+  border-top: 2px double var(--rule);
+}
+.patterns h2 {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 22px;
+  margin: 0 0 4px;
+  letter-spacing: 0.01em;
+}
+.patterns .sub {
+  font-family: var(--serif-it);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--ink-faded);
+  margin-bottom: 16px;
+}
+.patterns .row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: flex-start; }
+.patterns .card {
+  background: rgba(255,255,255,0.5);
+  border: 1px solid var(--rule-soft);
+  padding: 16px;
+}
+.patterns .card h3 {
+  font-family: var(--sc);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  color: var(--ink-soft);
+  margin: 0 0 12px;
+}
+
+.nom-search {
+  position: relative;
+  background: var(--paper);
+  border: 1px solid var(--ink-soft);
+  border-radius: 1px;
+  padding: 8px 12px;
+  font-family: var(--body);
+  font-size: 15px;
+}
+.nom-dropdown {
+  margin-top: 4px;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  max-height: 360px;
+  overflow: hidden;
+}
+.nom-item {
+  display: block;
+  padding: 9px 12px;
+  border-bottom: 1px dotted var(--rule-soft);
+  cursor: pointer;
+}
+.nom-item:hover { background: var(--paper-warm); }
+.nom-item .title {
+  font-family: var(--body);
+  font-size: 15.5px;
+  line-height: 1.2;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+.nom-item .region {
+  font-family: var(--serif-it);
+  font-style: italic;
+  font-size: 12.5px;
+  color: var(--ink-faded);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+/* — Annotation callouts — */
+.callout {
+  font-family: var(--serif-it);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--terra);
+  background: rgba(139,58,31,0.06);
+  border-left: 2px solid var(--terra);
+  padding: 6px 10px;
+  margin: 8px 0 14px;
+}
+
+/* — Spec annotations (for dev) — */
+.spec-strip {
+  margin-top: 64px;
+  padding: 22px 28px;
+  border: 1px dashed var(--rule);
+  background: rgba(255,255,255,0.3);
+}
+.spec-strip h2 {
+  font-family: var(--sc);
+  font-size: 13px;
+  letter-spacing: 0.22em;
+  color: var(--ink-soft);
+  margin: 0 0 12px;
+}
+.spec-strip ul {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 14.5px;
+  color: var(--ink-soft);
+  line-height: 1.65;
+}
+.spec-strip code {
+  font-family: 'SF Mono', Menlo, monospace;
+  font-size: 13px;
+  background: var(--paper);
+  padding: 1px 5px;
+  border: 1px solid var(--rule-soft);
+}
+
+.foot {
+  margin-top: 60px;
+  text-align: center;
+  font-family: var(--sc);
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  color: var(--ink-faded);
+}
+</style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<script type="text/babel" data-presets="env,react">
+
+const { useState, useMemo } = React;
+
+// ──────────────────────────────────────────────────────────────
+// MOCK DATA
+// ──────────────────────────────────────────────────────────────
+
+const GUEST = {
+  name: 'Ирина',
+  surname: 'Соколова',
+  born: '14 марта 1989, Псков',
+  zone: 3,
+  zodiac: 'Рыбы',
+  eyeColor: 'серые',
+};
+
+// canonical pool — what oracles produce
+const ALL_PLANTS = [
+  {
+    slug: 'salix-alba', name: 'Ива белая', lat: 'Salix alba',
+    minZone: 2, frost: false,
+    oracles: ['druid_tree','zodiac','eye_color','name'],
+    weight: 4.0,
+  },
+  {
+    slug: 'betula-pendula', name: 'Берёза повислая', lat: 'Betula pendula',
+    minZone: 2, frost: false,
+    oracles: ['druid_tree','slavic','numerology'],
+    weight: 3.2,
+  },
+  {
+    slug: 'sorbus-aucuparia', name: 'Рябина обыкновенная', lat: 'Sorbus aucuparia',
+    minZone: 2, frost: false,
+    oracles: ['slavic','zodiac'],
+    weight: 2.4,
+  },
+  {
+    slug: 'tilia-cordata', name: 'Липа сердцевидная', lat: 'Tilia cordata',
+    minZone: 3, frost: false,
+    oracles: ['druid_tree','slavic'],
+    weight: 2.1,
+  },
+  {
+    slug: 'crataegus-monogyna', name: 'Боярышник однопестичный', lat: 'Crataegus monogyna',
+    minZone: 3, frost: false,
+    oracles: ['eye_color','name'],
+    weight: 1.8,
+  },
+  {
+    slug: 'malus-baccata', name: 'Яблоня ягодная', lat: 'Malus baccata',
+    minZone: 2, frost: false,
+    oracles: ['numerology'],
+    weight: 1.2,
+  },
+  // ─── эти зимуют только в зоне 4+ — попадают в exclusi когда фильтр включён,
+  //     и подсвечиваются как "новые" когда фильтр выключают
+  {
+    slug: 'castanea-sativa', name: 'Каштан посевной', lat: 'Castanea sativa',
+    minZone: 5, frost: true,
+    oracles: ['druid_tree','zodiac'],
+    weight: 2.6,
+  },
+  {
+    slug: 'fagus-sylvatica', name: 'Бук европейский', lat: 'Fagus sylvatica',
+    minZone: 5, frost: true,
+    oracles: ['druid_tree','numerology'],
+    weight: 2.0,
+  },
+  {
+    slug: 'cornus-mas', name: 'Кизил обыкновенный', lat: 'Cornus mas',
+    minZone: 4, frost: true,
+    oracles: ['eye_color'],
+    weight: 1.4,
+  },
+  {
+    slug: 'taxus-baccata', name: 'Тис ягодный', lat: 'Taxus baccata',
+    minZone: 5, frost: true,
+    oracles: ['druid_tree'],
+    weight: 1.0,
+  },
+  {
+    slug: 'cedrus-libani', name: 'Кедр ливанский', lat: 'Cedrus libani',
+    minZone: 7, frost: true,
+    oracles: ['name'],
+    weight: 1.0,
+  },
+];
+
+const ORACLES = [
+  { id: 'druid_tree',   name: 'Деревья друидов',  lat: 'arbores druidum' },
+  { id: 'druid_flower', name: 'Цветы друидов',    lat: 'flores druidum',  pending: true },
+  { id: 'zodiac',       name: 'Зодиак',           lat: 'zodiacus' },
+  { id: 'slavic',       name: 'Славянский год',   lat: 'annus slavicus' },
+  { id: 'numerology',   name: 'Имя — число',      lat: 'numerus nominis' },
+  { id: 'eye_color',    name: 'Цвет глаз',        lat: 'color oculorum' },
+  { id: 'name',         name: 'Имя — растение',   lat: 'planta nominis' },
+];
+
+// ──────────────────────────────────────────────────────────────
+// HELPERS
+// ──────────────────────────────────────────────────────────────
+
+function diamondString(n) {
+  return '◆'.repeat(Math.max(1, Math.min(6, n)));
+}
+
+// recompute pool given active oracles and filter state
+function buildPool(activeOracles, frostFilter) {
+  return ALL_PLANTS
+    .map(p => {
+      const oraclesHit = p.oracles.filter(o => activeOracles.has(o));
+      return { ...p, oraclesHit, crosses: oraclesHit.length };
+    })
+    .filter(p => p.crosses > 0)
+    .filter(p => frostFilter ? p.minZone <= GUEST.zone : true)
+    .sort((a,b) => (b.crosses - a.crosses) || (b.weight - a.weight));
+}
+
+// ──────────────────────────────────────────────────────────────
+// COMPONENTS
+// ──────────────────────────────────────────────────────────────
+
+function Brand() {
+  return (
+    <header className="masthead">
+      <div className="brand">Hortus <span className="amp">&amp;</span> Animæ</div>
+      <div className="meta">
+        свод растений · folium iii<br/>
+        sub Anno mmxxvi · auctore experto
+      </div>
+    </header>
+  );
+}
+
+function GuestBar() {
+  return (
+    <div className="guest-bar">
+      <div className="guest-mono">И</div>
+      <div className="guest-name">
+        {GUEST.name} {GUEST.surname}
+        <span className="sub">{GUEST.born}</span>
+      </div>
+      <div className="guest-stamps">
+        климзона&nbsp;<b>{GUEST.zone}</b><br/>
+        ♓&nbsp;{GUEST.zodiac} · взгляд&nbsp;{GUEST.eyeColor}
+      </div>
+    </div>
+  );
+}
+
+function Fontes({ active, toggle, resetAll, flash }) {
+  return (
+    <div className="group fontes">
+      <h3>fontes — источники</h3>
+      <ul>
+        {ORACLES.map(o => {
+          const isOn = active.has(o.id);
+          const isPending = o.pending;
+          return (
+            <li
+              key={o.id}
+              className={`${isOn ? '' : 'off'} ${isPending ? 'disabled' : ''}`}
+              onClick={() => !isPending && toggle(o.id)}
+              title={isPending ? 'оракул ожидает данных' : 'переключить'}
+            >
+              <span className="tick">{isOn ? '✓' : ''}</span>
+              <span className="name">{o.name}</span>
+              <span className="count">{isPending ? '⏸' : o.lat}</span>
+            </li>
+          );
+        })}
+      </ul>
+      <button className="reset" onClick={resetAll}>↺ вернуть все источники</button>
+      <div className={`recompute-flash ${flash ? 'on' : ''}`}>
+        свод пересчитан…
+      </div>
+    </div>
+  );
+}
+
+function Filtra({ frostFilter, setFrost, hideWeeds, setHideWeeds }) {
+  return (
+    <div className="group filtra">
+      <h3>filtra — ограничения</h3>
+      <div className="row">
+        <input type="checkbox" id="f-frost" checked={frostFilter} onChange={e => setFrost(e.target.checked)} />
+        <label htmlFor="f-frost">
+          пройдёт зимовку (зона ≥&nbsp;{GUEST.zone})
+          <span className="hint">основано на места рождения и USDA-карте</span>
+        </label>
+      </div>
+      <div className="row">
+        <input type="checkbox" id="f-weeds" checked={hideWeeds} onChange={e => setHideWeeds(e.target.checked)} />
+        <label htmlFor="f-weeds">
+          скрыть сорные / агрессивные
+          <span className="hint">борщевик, амброзия и&nbsp;т.&nbsp;п.</span>
+        </label>
+      </div>
+    </div>
+  );
+}
+
+function PlantCard({ p, selected, primary, note, isNew, onPick, onPrimary, onNote, onExclude }) {
+  return (
+    <div className={`plant
+      ${selected ? 'selected' : ''}
+      ${primary ? 'primary' : ''}
+      ${p.frost ? 'frost' : ''}
+      ${isNew && p.frost ? 'new' : ''}
+    `}>
+      {primary && <div className="primary-mark">arbor princeps</div>}
+      {isNew && p.frost && <div className="corner">+ зона {p.minZone}</div>}
+
+      <div className="icon">{p.name.split(' ')[0].slice(0,4).toLowerCase()}</div>
+
+      <div className="body">
+        <div className="name">
+          {p.name}
+          <em>{p.lat}</em>
+          {p.frost && !selected && (
+            <span className="frost-mark" title={`не зимует в зоне ${GUEST.zone}; нужна ≥ ${p.minZone}`}>❋</span>
+          )}
+        </div>
+        <div className="meta">
+          {p.oraclesHit.length} {p.oraclesHit.length === 1 ? 'оракул' : 'оракула'}
+          {' · '}мин. зона {p.minZone}
+        </div>
+        <div className="tags">
+          {p.oraclesHit.map(o => (
+            <span key={o} className={`tag ${o}`}>{ORACLES.find(x => x.id === o)?.name.toLowerCase()}</span>
+          ))}
+        </div>
+
+        {selected && (
+          <div className="note-block">
+            <label>{primary ? 'note expert · главное дерево' : 'note expert'}</label>
+            <textarea
+              placeholder="заметка эксперта для отчёта…"
+              value={note || ''}
+              onChange={e => onNote(p.slug, e.target.value)}
+            />
+            <button
+              className={`primary-toggle ${primary ? 'is-primary' : ''}`}
+              onClick={() => onPrimary(p.slug)}
+            >
+              {primary ? '✦ главное дерево' : 'отметить главным'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="right">
+        <div className="gems" title={`${p.crosses} пересечений`}>{diamondString(p.crosses)}</div>
+        <div className="weight">вес&nbsp;{p.weight.toFixed(1)}</div>
+        <button className="pick" onClick={() => onPick(p.slug)}>
+          {selected ? '✓ в коллекции' : '+ в коллекцию'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [activeOracles, setActiveOracles] = useState(new Set(ORACLES.filter(o => !o.pending).map(o => o.id)));
+  const [frostFilter, setFrostFilter] = useState(true);
+  const [hideWeeds, setHideWeeds] = useState(true);
+  const [selected, setSelected] = useState(new Set(['salix-alba','sorbus-aucuparia']));
+  const [primary, setPrimary] = useState('salix-alba');
+  const [notes, setNotes] = useState({
+    'salix-alba': 'Дерево пограничья и тихой воды. Главная нота сада — у северной стены, ближе к воде.',
+    'sorbus-aucuparia': 'Спутница по славянской и зодиакальной линиям. Хорошо ставить парой с ивой.',
+  });
+  const [flash, setFlash] = useState(false);
+
+  // pools for both filter states (for diff)
+  const pool = useMemo(() => buildPool(activeOracles, frostFilter), [activeOracles, frostFilter]);
+  const poolUnfiltered = useMemo(() => buildPool(activeOracles, false), [activeOracles]);
+  const excluded = useMemo(() => {
+    if (!frostFilter) return [];
+    const inSet = new Set(pool.map(p => p.slug));
+    return poolUnfiltered.filter(p => !inSet.has(p.slug));
+  }, [pool, poolUnfiltered, frostFilter]);
+
+  // mark which cards are "new" when filter is off (frost cards)
+  const newSlugs = useMemo(() => {
+    if (frostFilter) return new Set();
+    const filtered = buildPool(activeOracles, true);
+    const filteredSet = new Set(filtered.map(p => p.slug));
+    return new Set(poolUnfiltered.filter(p => !filteredSet.has(p.slug)).map(p => p.slug));
+  }, [frostFilter, activeOracles, poolUnfiltered]);
+
+  const electaList = pool.filter(p => selected.has(p.slug));
+  const silvaList  = pool.filter(p => !selected.has(p.slug));
+
+  function toggleOracle(id) {
+    const next = new Set(activeOracles);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setActiveOracles(next);
+    triggerFlash();
+  }
+  function resetOracles() {
+    setActiveOracles(new Set(ORACLES.filter(o => !o.pending).map(o => o.id)));
+    triggerFlash();
+  }
+  function triggerFlash() {
+    setFlash(true);
+    setTimeout(() => setFlash(false), 1400);
+  }
+  function pickPlant(slug) {
+    const next = new Set(selected);
+    if (next.has(slug)) {
+      next.delete(slug);
+      if (primary === slug) setPrimary(null);
+    } else next.add(slug);
+    setSelected(next);
+  }
+  function setPrimaryPlant(slug) {
+    setPrimary(primary === slug ? null : slug);
+  }
+  function setNote(slug, text) {
+    setNotes({ ...notes, [slug]: text });
+  }
+  function restoreFromExclusi() {
+    setFrostFilter(false);
+  }
+
+  return (
+    <div className="page">
+      <Brand />
+      <GuestBar />
+
+      <div className="layout">
+
+        {/* ─── LEFT ─── */}
+        <aside className="col">
+          <Fontes
+            active={activeOracles}
+            toggle={toggleOracle}
+            resetAll={resetOracles}
+            flash={flash}
+          />
+          <Filtra
+            frostFilter={frostFilter}
+            setFrost={(v) => { setFrostFilter(v); triggerFlash(); }}
+            hideWeeds={hideWeeds}
+            setHideWeeds={setHideWeeds}
+          />
+        </aside>
+
+        {/* ─── MAIN ─── */}
+        <main className="col">
+          <div className="folium-head">
+            <div className="folium-title">Свод <em>растений</em></div>
+            <div className="folium-page">folium iii · pag. xii</div>
+          </div>
+          <div className="folium-instr">
+            отметьте 3–5 в коллекцию и выделите одно главное дерево.
+            заметки эксперта попадут в лист гостьи.
+          </div>
+
+          {/* filter state strip */}
+          <div className={`filter-state ${frostFilter ? '' : 'off'}`}>
+            {frostFilter ? (
+              <>
+                <span>пул отфильтрован по климзоне.</span>
+                <span><span className="num">{excluded.length}</span> растений отложены в <em>exclusi</em></span>
+              </>
+            ) : (
+              <>
+                <span>фильтр зимовки снят.</span>
+                <span>в своде <span className="num off">+{newSlugs.size}</span> растений за пределами зоны (отмечены ❋)</span>
+              </>
+            )}
+            <button className="toggle" onClick={() => { setFrostFilter(!frostFilter); triggerFlash(); }}>
+              {frostFilter ? 'показать сырой пул' : 'вернуть фильтр'}
+            </button>
+          </div>
+
+          {/* ─── electa ─── */}
+          <div className="section-head">
+            <h2>electa</h2>
+            <span className="lat">избранные · {electaList.length} из 3–5</span>
+            <span className="right">{primary ? '✦ главное дерево отмечено' : 'главное дерево не выбрано'}</span>
+          </div>
+
+          {electaList.length === 0 ? (
+            <div className="empty-electa">
+              отметьте растения из&nbsp;свода ниже, чтобы&nbsp;собрать коллекцию для&nbsp;листа гостьи.
+            </div>
+          ) : (
+            <div className="plant-grid">
+              {electaList.map(p => (
+                <PlantCard
+                  key={p.slug}
+                  p={p}
+                  selected={true}
+                  primary={primary === p.slug}
+                  note={notes[p.slug]}
+                  isNew={newSlugs.has(p.slug)}
+                  onPick={pickPlant}
+                  onPrimary={setPrimaryPlant}
+                  onNote={setNote}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* ─── silva ─── */}
+          <div className="section-head">
+            <h2>silva</h2>
+            <span className="lat">свод растений · {silvaList.length}</span>
+          </div>
+
+          <div className="plant-grid">
+            {silvaList.map(p => (
+              <PlantCard
+                key={p.slug}
+                p={p}
+                selected={false}
+                primary={false}
+                isNew={newSlugs.has(p.slug)}
+                onPick={pickPlant}
+                onPrimary={setPrimaryPlant}
+                onNote={setNote}
+              />
+            ))}
+          </div>
+
+          <div className="actions">
+            <button className="btn ghost">← вернуться к анкете</button>
+            <div className="spacer" />
+            <button className="btn ghost">сохранить как версию</button>
+            <button className="btn primary">сохранить и открыть лист гостьи →</button>
+          </div>
+        </main>
+
+        {/* ─── RIGHT ─── */}
+        <aside className="col">
+          <div className="group exclusi">
+            <h3>exclusi — отложены</h3>
+            {excluded.length === 0 ? (
+              <div className="empty-electa" style={{margin:0,padding:'8px 10px',fontSize:13}}>
+                ничего не&nbsp;отложено. снимите фильтр выше, чтобы увидеть пул целиком.
+              </div>
+            ) : (
+              <ul>
+                {excluded.map(p => (
+                  <li key={p.slug}>
+                    <div>
+                      {p.name}
+                      <span className="why">не зимует в зоне {GUEST.zone}; нужна ≥ {p.minZone}</span>
+                    </div>
+                    <button className="restore" onClick={restoreFromExclusi}>↺ вернуть</button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="group historiae">
+            <h3>historiae — версии</h3>
+            <ul style={{fontSize:14}}>
+              <li style={{padding:'8px 0',borderBottom:'1px dotted var(--rule-soft)'}}>
+                <b style={{fontFamily:'var(--serif)',fontWeight:500}}>v3 · текущая</b><br/>
+                <span style={{fontFamily:'var(--serif-it)',fontStyle:'italic',fontSize:12,color:'var(--ink-faded)'}}>
+                  12 мая · ива главная · 2 спутника
+                </span>
+              </li>
+              <li style={{padding:'8px 0',borderBottom:'1px dotted var(--rule-soft)'}}>
+                <b style={{fontFamily:'var(--serif)',fontWeight:500}}>v2</b><br/>
+                <span style={{fontFamily:'var(--serif-it)',fontStyle:'italic',fontSize:12,color:'var(--ink-faded)'}}>
+                  10 мая · берёза главная · 3 спутника
+                </span>
+              </li>
+              <li style={{padding:'8px 0'}}>
+                <b style={{fontFamily:'var(--serif)',fontWeight:500}}>v1</b><br/>
+                <span style={{fontFamily:'var(--serif-it)',fontStyle:'italic',fontSize:12,color:'var(--ink-faded)'}}>
+                  8 мая · черновик · 1 спутник
+                </span>
+              </li>
+            </ul>
+          </div>
+        </aside>
+
+      </div>
+
+      {/* ─── BONUS: Nominatim pattern ─── */}
+      <div className="patterns">
+        <h2>паттерны — для других экранов</h2>
+        <div className="sub">здесь же — образец, как должен выводиться адресный поиск в анкете (скрин 05).</div>
+        <div className="row">
+          <div className="card">
+            <h3>05 · NOMINATIM — две строки, ellipsis</h3>
+            <div className="nom-search">Псков, Себеж<span style={{color:'#6b5a44'}}>│</span></div>
+            <div className="nom-dropdown">
+              <div className="nom-item">
+                <span className="title">Себеж</span>
+                <span className="region">город · Себежский район, Псковская область, Россия</span>
+              </div>
+              <div className="nom-item">
+                <span className="title">Идрица</span>
+                <span className="region">посёлок · Идрицкое сельское поселение, Себежский район, Псковская область</span>
+              </div>
+              <div className="nom-item">
+                <span className="title">Себежское озеро</span>
+                <span className="region">водоём · Себежский национальный парк, Псковская область, Россия</span>
+              </div>
+              <div className="nom-item">
+                <span className="title">Себежское сельское поселение</span>
+                <span className="region">административный округ · Себежский район, Псковская область, Россия</span>
+              </div>
+            </div>
+          </div>
+          <div className="card">
+            <h3>спецификация</h3>
+            <ul style={{margin:0,paddingLeft:18,fontSize:14,lineHeight:1.7}}>
+              <li><b>title</b> — короткое имя (`display_name.split(',')[0]`), `white-space: nowrap`, `text-overflow: ellipsis`</li>
+              <li><b>region</b> — `display_name` без первой части, тоже одна строка с ellipsis, курсив</li>
+              <li>атрибут <code>title</code> на всём `&lt;.nom-item&gt;` — полный `display_name` (нативный browser tooltip)</li>
+              <li>тип объекта (`город`, `посёлок`, `водоём`) — из поля <code>type</code> / <code>class</code> Nominatim, через «·» перед регионом</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── SPEC for dev ─── */}
+      <div className="spec-strip">
+        <h2>спецификация для разработчика — что нового в этом экране</h2>
+        <ul>
+          <li><b>ромбы вместо чисел.</b> 1 пересечение = 1 ◆, до 6. цвет — `var(--terra)`. цифра «вес 4.0» — мелким, для эксперта, под ромбами.</li>
+          <li><b>fontes — настоящие тогглы.</b> клик по строке: тогглит state, мгновенный пересчёт пула, на 1.4с показывается курсивная подсказка «свод пересчитан…». pending-оракулы (`druid_flower`) — disabled с иконкой ⏸.</li>
+          <li><b>filtra — отделённый блок</b>, в нём <code>frost</code> и <code>hideWeeds</code>. снятие frost-фильтра — плавный переход страницы.</li>
+          <li><b>electa / silva — раздельные секции</b> внутри пула. electa-заголовок виден всегда, даже когда пусто (с подсказкой курсивом). главное дерево — красная обводка + бейдж <code>arbor princeps</code>.</li>
+          <li><b>оракул-теги на карточках.</b> каждое попадание оракула — мелкий тег с цветной обводкой по системе. в spec: классы `.tag.druid_tree`, `.tag.zodiac` и&nbsp;т.&nbsp;д.</li>
+          <li><b>filter state bar.</b> два состояния: «отфильтровано» (терракотовый акцент) и «снят» (золотой). показывает количество отложенных / добавленных. кнопка справа — переключает.</li>
+          <li><b>diff при выключении frost.</b> «новые» растения (те что добавились) получают `box-shadow: 0 0 0 2px gold-soft` и угловой бейдж «+ зона N». держится постоянно пока фильтр снят (не подсветка-вспышка).</li>
+          <li><b>маркер ❋</b> на карточках растений из других зон — как в electa, так и в silva (если фильтр снят). нативный tooltip — «не зимует в зоне 3; нужна ≥ 5».</li>
+          <li><b>exclusi с «↺ вернуть»</b> — кнопка снимает frost-фильтр (а не возвращает одно растение). текст почему именно отложено — курсивом под названием.</li>
+          <li><b>note-block раскрывается только при чекнутой карточке</b>; кнопка «отметить главным» внутри блока. без чека note не виден — карточки одного ритма в silva.</li>
+        </ul>
+      </div>
+
+      <div className="foot">— hortus animæ · prototype v2 —</div>
+
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+
+</body>
+</html>
