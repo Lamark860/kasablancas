@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from vlad.db import get_db
 from vlad.models import Recommendation
+from vlad.routes.persons import _enrich_rec_out
 from vlad.schemas.curated import RecommendationOut
 
 router = APIRouter()
@@ -27,4 +28,4 @@ def get_leaf_by_token(token: str, db: Session = Depends(get_db)):
     ).first()
     if rec is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "leaf not found")
-    return rec
+    return _enrich_rec_out(rec, db)

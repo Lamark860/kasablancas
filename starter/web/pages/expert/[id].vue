@@ -493,7 +493,7 @@ const oracleLatin: Record<string, string> = {
                     <span v-if="h.is_final" class="history__badge history__badge--final" title="отдана гостье">finalis</span>
                   </div>
                   <div class="history__summary">
-                    <span v-if="h.title_plant_slug">главное: <em>{{ h.title_plant_slug }}</em> · </span>
+                    <span v-if="h.title_plant_slug">главное: <em>{{ h.title_plant_name_ru || h.title_plant_slug }}</em> · </span>
                     <span>{{ h.curated_pool?.length ?? 0 }} в&nbsp;избр.</span>
                   </div>
                   <div v-if="i !== 0" class="history__diff">

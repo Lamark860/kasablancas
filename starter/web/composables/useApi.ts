@@ -92,6 +92,10 @@ export interface OracleInfo {
 export interface CuratedItem {
   plant_slug: string
   expert_note?: string | null
+  // обогащение от бэка (на GET): если кураторский слаг есть в таблице plants,
+  // получаем имя и короткую историю даже когда он отсутствует в текущем raw_pool.
+  plant_name_ru?: string | null
+  plant_short_story?: string | null
 }
 
 export interface CuratedSave {
@@ -110,6 +114,7 @@ export interface RecommendationOut {
   raw_pool: PoolEntry[]
   curated_pool: CuratedItem[] | null
   title_plant_slug: string | null
+  title_plant_name_ru: string | null
   expert_notes: string | null
   share_token: string | null
   is_final: boolean
@@ -128,6 +133,7 @@ export interface RecommendationSummary {
   id: number
   person_id: number
   title_plant_slug: string | null
+  title_plant_name_ru: string | null
   curated_pool: CuratedItem[] | null
   expert_notes: string | null
   is_final: boolean

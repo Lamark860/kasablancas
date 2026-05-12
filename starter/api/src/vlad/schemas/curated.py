@@ -8,10 +8,17 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 
 class CuratedItem(BaseModel):
-    """Одно растение в кураторской сборке + индивидуальная заметка эксперта."""
+    """Одно растение в кураторской сборке + индивидуальная заметка эксперта.
+
+    `plant_name_ru` / `plant_short_story` — производные поля, которые мы
+    обогащаем при чтении из БД (см. routes._enrich_curated_with_plants).
+    Они не сохраняются — на PUT обратно мы их игнорируем.
+    """
 
     plant_slug: str
     expert_note: str | None = None
+    plant_name_ru: str | None = None
+    plant_short_story: str | None = None
 
 
 class CuratedSave(BaseModel):
@@ -64,6 +71,9 @@ class RecommendationOut(BaseModel):
 
     curated_pool: list[CuratedItem] | None = None
     title_plant_slug: str | None = None
+    # Производное от title_plant_slug; фронт показывает его в истории / в leaf-листе,
+    # если title-растение не попало в текущий raw_pool (фильтры/оракулы поменялись).
+    title_plant_name_ru: str | None = None
     expert_notes: str | None = None
 
     share_token: str | None = None
@@ -86,6 +96,7 @@ class RecommendationSummary(BaseModel):
     id: int
     person_id: int
     title_plant_slug: str | None = None
+    title_plant_name_ru: str | None = None
     curated_pool: list[CuratedItem] | None = None
     expert_notes: str | None = None
     is_final: bool = False

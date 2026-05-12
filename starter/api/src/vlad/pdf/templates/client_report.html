@@ -91,7 +91,11 @@
       padding: 18pt 0 22pt;
       text-align: center;
       margin-top: 6pt;
-      /* главное дерево не разрывается между страницами */
+      /* break-inside: avoid здесь раньше валил WeasyPrint при длинной заметке
+         (note вынесён ниже как отдельный блок, поэтому шапка влезает на лист). */
+    }
+    /* Сам титульный блок без заметки — небольшой и стабильно помещается. */
+    .main-tree__title {
       page-break-inside: avoid;
       break-inside: avoid;
     }
@@ -178,9 +182,8 @@
     .other {
       border: 0.6pt solid var(--rule);
       padding: 10pt 12pt;
-      /* карточка-спутник не рвётся пополам */
-      page-break-inside: avoid;
-      break-inside: avoid;
+      /* break-inside: avoid — снято, потому что expert_note может быть очень
+         длинной и тогда карточка не вмещается ни на одну страницу. */
     }
     .other__name {
       font-family: "UnifrakturCook", "Cormorant Garamond", serif;
@@ -231,8 +234,7 @@
       font-style: italic;
       font-size: 12pt;
       color: var(--ink);
-      page-break-inside: avoid;
-      break-inside: avoid;
+      /* break-inside: avoid — снято, см. .main-tree выше. */
     }
     .notes__eyebrow {
       font-family: "IBM Plex Mono", ui-monospace, monospace;
@@ -277,15 +279,17 @@
 
     {% if main %}
       <div class="main-tree">
-        <div class="main-tree__eyebrow">главное дерево</div>
-        <div class="icon-circle"><span class="icon-circle__letter">{{ main.name_ru[0] }}</span></div>
-        <div class="main-tree__name">{{ main.name_ru }}</div>
-        {% if main.name_lat %}
-          <div class="main-tree__lat">{{ main.name_lat }}</div>
-        {% endif %}
-        {% if main.short_story %}
-          <div class="main-tree__story">«{{ main.short_story }}»</div>
-        {% endif %}
+        <div class="main-tree__title">
+          <div class="main-tree__eyebrow">главное дерево</div>
+          <div class="icon-circle"><span class="icon-circle__letter">{{ main.name_ru[0] }}</span></div>
+          <div class="main-tree__name">{{ main.name_ru }}</div>
+          {% if main.name_lat %}
+            <div class="main-tree__lat">{{ main.name_lat }}</div>
+          {% endif %}
+          {% if main.short_story %}
+            <div class="main-tree__story">«{{ main.short_story }}»</div>
+          {% endif %}
+        </div>
         {% if main.expert_note %}
           <div class="main-tree__note">{{ main.expert_note }}</div>
         {% endif %}

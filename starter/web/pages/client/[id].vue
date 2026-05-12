@@ -25,13 +25,15 @@ interface ClientItem {
   expert_note: string | null
 }
 
-function pick(slug: string, expert_note: string | null): ClientItem {
-  const raw: PoolEntry | undefined = rec.value?.raw_pool.find((p) => p.plant_slug === slug)
+function pick(it: { plant_slug: string; expert_note?: string | null; plant_name_ru?: string | null; plant_short_story?: string | null }): ClientItem {
+  // Сначала enrichment из curated_pool (бэк подтянул из таблицы plants даже для
+  // слагов, выпавших из текущего raw_pool), потом raw_pool, потом сам slug.
+  const raw: PoolEntry | undefined = rec.value?.raw_pool.find((p) => p.plant_slug === it.plant_slug)
   return {
-    slug,
-    name_ru: raw?.plant_name_ru || slug,
-    short_story: raw?.plant_short_story ?? null,
-    expert_note,
+    slug: it.plant_slug,
+    name_ru: it.plant_name_ru || raw?.plant_name_ru || it.plant_slug,
+    short_story: it.plant_short_story || raw?.plant_short_story || null,
+    expert_note: it.expert_note ?? null,
   }
 }
 
@@ -40,14 +42,14 @@ const main = computed<ClientItem | null>(() => {
   const items = rec.value.curated_pool
   const titleSlug = rec.value.title_plant_slug || items[0].plant_slug
   const titleItem = items.find((it) => it.plant_slug === titleSlug) ?? items[0]
-  return pick(titleItem.plant_slug, titleItem.expert_note ?? null)
+  return pick(titleItem)
 })
 
 const others = computed<ClientItem[]>(() => {
   if (!rec.value || !main.value) return []
   return (rec.value.curated_pool || [])
     .filter((it) => it.plant_slug !== main.value!.slug)
-    .map((it) => pick(it.plant_slug, it.expert_note ?? null))
+    .map((it) => pick(it))
 })
 
 const firstName = computed(() => person.value?.first_name || 'госпожа')

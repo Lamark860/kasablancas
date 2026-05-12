@@ -7,12 +7,65 @@ from sqlalchemy.orm import Session
 
 from vlad.core.orchestrator import recommend as run_orchestrator
 from vlad.db import get_db
-from vlad.models import Person, Recommendation
+from vlad.models import Person, Plant, Recommendation
 from vlad.natal.geocode import geocode_place
 from vlad.schemas.curated import CuratedSave, RecommendationOut, RecommendationSummary
 from vlad.schemas.person import PersonCreate, PersonOut
 
 router = APIRouter()
+
+
+def _plant_names_for_slugs(slugs: set[str], db: Session) -> dict[str, tuple[str, str | None]]:
+    """Батч-фетч: slug → (name_ru, short_story). Пустой dict если slugs пусто."""
+    if not slugs:
+        return {}
+    plants = db.scalars(select(Plant).where(Plant.slug.in_(slugs))).all()
+    return {p.slug: (p.name_ru, p.short_story) for p in plants}
+
+
+def _enrich_rec_out(rec: Recommendation, db: Session) -> RecommendationOut:
+    """Заполняем title_plant_name_ru + plant_name_ru/short_story в curated_pool.
+
+    Это нужно когда главное дерево или элемент curated отсутствуют в
+    текущем raw_pool (оракулы/фильтры поменялись после кураторского выбора).
+    """
+    out = RecommendationOut.model_validate(rec)
+    slugs: set[str] = set()
+    if out.title_plant_slug:
+        slugs.add(out.title_plant_slug)
+    for it in (out.curated_pool or []):
+        slugs.add(it.plant_slug)
+    info = _plant_names_for_slugs(slugs, db)
+    if out.title_plant_slug and out.title_plant_slug in info:
+        out.title_plant_name_ru = info[out.title_plant_slug][0]
+    for it in (out.curated_pool or []):
+        if it.plant_slug in info:
+            name_ru, story = info[it.plant_slug]
+            it.plant_name_ru = name_ru
+            it.plant_short_story = story
+    return out
+
+
+def _enrich_rec_summary(rows: list[Recommendation], db: Session) -> list[RecommendationSummary]:
+    """То же для списка summary (история кураторских версий)."""
+    slugs = {r.title_plant_slug for r in rows if r.title_plant_slug}
+    for r in rows:
+        for it in (r.curated_pool or []):
+            if isinstance(it, dict) and it.get("plant_slug"):
+                slugs.add(it["plant_slug"])
+    info = _plant_names_for_slugs(slugs, db)
+    out: list[RecommendationSummary] = []
+    for r in rows:
+        s = RecommendationSummary.model_validate(r)
+        if s.title_plant_slug and s.title_plant_slug in info:
+            s.title_plant_name_ru = info[s.title_plant_slug][0]
+        for it in (s.curated_pool or []):
+            if it.plant_slug in info:
+                name_ru, story = info[it.plant_slug]
+                it.plant_name_ru = name_ru
+                it.plant_short_story = story
+        out.append(s)
+    return out
 
 
 @router.get("/", response_model=list[PersonOut])
@@ -149,7 +202,7 @@ def save_recommendation(
     db.add(rec)
     db.commit()
     db.refresh(rec)
-    return rec
+    return _enrich_rec_out(rec, db)
 
 
 
@@ -165,7 +218,7 @@ def get_recommendation(person_id: int, db: Session = Depends(get_db)):
         raise HTTPException(
             status.HTTP_404_NOT_FOUND, "recommendation not saved yet"
         )
-    return rec
+    return _enrich_rec_out(rec, db)
 
 
 @router.get(
@@ -182,7 +235,7 @@ def list_recommendations(person_id: int, db: Session = Depends(get_db)):
         .where(Recommendation.person_id == person_id)
         .order_by(Recommendation.id.desc())
     ).all()
-    return rows
+    return _enrich_rec_summary(list(rows), db)
 
 
 @router.get(
@@ -198,7 +251,7 @@ def get_recommendation_version(
     rec = db.get(Recommendation, rec_id)
     if rec is None or rec.person_id != person_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "recommendation version not found")
-    return rec
+    return _enrich_rec_out(rec, db)
 
 
 @router.post(
@@ -232,4 +285,4 @@ def finalize_recommendation_version(
     rec.is_final = True
     db.commit()
     db.refresh(rec)
-    return rec
+    return _enrich_rec_out(rec, db)
