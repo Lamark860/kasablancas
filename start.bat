@@ -1,7 +1,8 @@
-@echo off
-REM Запуск Hortus Animae на Windows. Двойной клик из Проводника.
+﻿@echo off
 chcp 65001 >nul
 setlocal enabledelayedexpansion
+
+REM Запуск Hortus Animae на Windows. Двойной клик из Проводника.
 
 cd /d "%~dp0starter"
 
