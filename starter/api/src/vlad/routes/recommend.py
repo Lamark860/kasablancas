@@ -19,12 +19,18 @@ router = APIRouter()
 def recommend(
     payload: RecommendInput,
     apply_filters: bool = True,
+    frost: bool | None = None,
+    hide_weeds: bool | None = None,
     disabled: str | None = None,
     db: Session = Depends(get_db),
 ):
-    """Главный эндпоинт. По умолчанию пул фильтруется (USDA, sun, soil,
-    дерево-враг, is_weed_like). `?apply_filters=false` — эксперт смотрит «сырой»
-    пул со всем, что выпало по символическим системам.
+    """Главный эндпоинт. Фильтры теперь разделены:
+
+    - `frost=true` (default) — выживет ли в саду: USDA, sun, soil, дерево-враг
+    - `hide_weeds=true` (default) — понизить вес is_weed_like ×0.5
+
+    Старое `apply_filters=false` сохраняется как «выключить оба» (backward
+    compat для curl/тестов).
 
     `?disabled=oracle_a,oracle_b` — временно выключить оракулы в UI
     (fontes-тогглы), не трогая Oracle.active в БД. Удобно для исследования
@@ -43,5 +49,7 @@ def recommend(
     return run_orchestrator(
         person, db,
         apply_filters_flag=apply_filters,
+        frost=frost,
+        hide_weeds=hide_weeds,
         disabled_oracles=disabled_oracles,
     )

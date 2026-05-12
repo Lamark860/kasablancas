@@ -26,15 +26,22 @@ def recommend(
     db: Session,
     apply_filters_flag: bool = True,
     disabled_oracles: set[str] | None = None,
+    *,
+    frost: bool | None = None,
+    hide_weeds: bool | None = None,
 ) -> dict[str, Any]:
     """Главная функция: Person → пул растений-кандидатов с источниками.
 
     Args:
         person: SQLAlchemy Person (сохранённый или эфемерный).
         db: SQLAlchemy session.
-        apply_filters_flag: если True (по умолчанию), пул прогоняется через
-            фильтры эксперта (USDA, sun, soil, дерево-враг, is_weed_like).
-            False — отдаём «сырой» пул, эксперт хочет видеть всё.
+        apply_filters_flag: backward-compat — если True, оба фильтра on;
+            если False, оба off. Новый код должен передавать frost/hide_weeds
+            явно; этот флаг игнорируется когда заданы оба новых.
+        frost: фильтр «выживет в саду» — USDA, sun, soil, дерево-враг.
+            None → подтянуть из apply_filters_flag.
+        hide_weeds: фильтр «приглушить сорные» — is_weed_like ×0.5.
+            None → подтянуть из apply_filters_flag.
         disabled_oracles: оракулы, которые эксперт временно выключил в UI
             (fontes-тогглы). На уровне БД они остаются active=1; здесь
             пропускаем их при сборке пула, чтобы UI мог делать «что если?».
@@ -111,14 +118,25 @@ def recommend(
         reverse=True,
     )
 
+    # Разрешаем флаги: явные frost/hide_weeds приоритетнее, иначе наследуем
+    # от apply_filters_flag (backward compat для существующих вызовов и тестов).
+    effective_frost = apply_filters_flag if frost is None else frost
+    effective_hide_weeds = apply_filters_flag if hide_weeds is None else hide_weeds
+
     excluded: list[dict] = []
-    if apply_filters_flag:
-        sorted_pool, exclusions = apply_filters(sorted_pool, person, db)
+    if effective_frost or effective_hide_weeds:
+        sorted_pool, exclusions = apply_filters(
+            sorted_pool, person, db,
+            frost=effective_frost,
+            hide_weeds=effective_hide_weeds,
+        )
         excluded = [{"plant_slug": e.plant_slug, "reason": e.reason} for e in exclusions]
 
     return {
         "active_oracles": sorted(active_meta.keys() - disabled),
         "pool": sorted_pool,
-        "filters_applied": apply_filters_flag,
+        "filters_applied": effective_frost or effective_hide_weeds,
+        "frost": effective_frost,
+        "hide_weeds": effective_hide_weeds,
         "excluded": excluded,
     }

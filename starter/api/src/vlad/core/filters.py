@@ -112,11 +112,25 @@ def enemy_tree_slugs(birth_date_iso: str, db: Session) -> set[str]:
     return enemies
 
 
-def apply_filters(pool: list[dict], person, db: Session) -> tuple[list[dict], list[Exclusion]]:
+def apply_filters(
+    pool: list[dict],
+    person,
+    db: Session,
+    *,
+    frost: bool = True,
+    hide_weeds: bool = True,
+) -> tuple[list[dict], list[Exclusion]]:
     """Возвращает (отфильтрованный_пул, список_исключений).
 
-    Каждое исключение содержит slug и причину; пул перевзвешивается
-    (is_weed_like понижает total_weight) и пере-сортируется.
+    Args:
+        frost: «выживет ли в саду» — USDA-зона, sun, soil, дерево-враг.
+            Все 4 фильтра-исключения работают вместе. Если выключен —
+            ничего из пула не выкидывается, exclusions пустой.
+        hide_weeds: понизить вес растений с is_weed_like ×0.5. Если
+            выключен — вес не меняется.
+
+    Каждое исключение содержит slug и причину; пул при необходимости
+    перевзвешивается и пере-сортируется.
     """
     if not pool:
         return pool, []
@@ -129,7 +143,7 @@ def apply_filters(pool: list[dict], person, db: Session) -> tuple[list[dict], li
 
     # «дерево-враг» считаем один раз
     birth_date = (getattr(person, "birth_date", None) or "").strip()
-    enemies = enemy_tree_slugs(birth_date, db) if birth_date else set()
+    enemies = enemy_tree_slugs(birth_date, db) if (frost and birth_date) else set()
 
     person_zone = getattr(person, "garden_zone_usda", None)
     person_sun = getattr(person, "garden_sun", None)
@@ -142,37 +156,38 @@ def apply_filters(pool: list[dict], person, db: Session) -> tuple[list[dict], li
         slug = entry["plant_slug"]
         plant = plants_by_slug.get(slug)
 
-        if slug in enemies:
-            excluded.append(Exclusion(slug, f"дерево-враг (±{ENEMY_WINDOW_DAYS} дней по друидам)"))
-            continue
+        if frost:
+            if slug in enemies:
+                excluded.append(Exclusion(slug, f"дерево-враг (±{ENEMY_WINDOW_DAYS} дней по друидам)"))
+                continue
 
-        if plant is not None:
-            if (
-                person_zone is not None
-                and plant.min_zone_usda is not None
-                and plant.min_zone_usda > person_zone
-            ):
-                excluded.append(
-                    Exclusion(
-                        slug,
-                        f"min USDA {plant.min_zone_usda} > участка {person_zone}",
+            if plant is not None:
+                if (
+                    person_zone is not None
+                    and plant.min_zone_usda is not None
+                    and plant.min_zone_usda > person_zone
+                ):
+                    excluded.append(
+                        Exclusion(
+                            slug,
+                            f"min USDA {plant.min_zone_usda} > участка {person_zone}",
+                        )
                     )
-                )
-                continue
+                    continue
 
-            if person_sun and not _sun_compatible(person_sun, plant.sun):
-                excluded.append(Exclusion(slug, f"sun {plant.sun} ≠ {person_sun}"))
-                continue
+                if person_sun and not _sun_compatible(person_sun, plant.sun):
+                    excluded.append(Exclusion(slug, f"sun {plant.sun} ≠ {person_sun}"))
+                    continue
 
-            if person_soil and not _soil_compatible(person_soil, plant.soil_moisture):
-                excluded.append(
-                    Exclusion(slug, f"soil {plant.soil_moisture} ≠ {person_soil}")
-                )
-                continue
+                if person_soil and not _soil_compatible(person_soil, plant.soil_moisture):
+                    excluded.append(
+                        Exclusion(slug, f"soil {plant.soil_moisture} ≠ {person_soil}")
+                    )
+                    continue
 
-            if plant.is_weed_like:
-                entry = {**entry, "total_weight": entry["total_weight"] * WEED_WEIGHT_FACTOR}
-                entry.setdefault("notes", []).append("weed_like — вес снижен")
+        if hide_weeds and plant is not None and plant.is_weed_like:
+            entry = {**entry, "total_weight": entry["total_weight"] * WEED_WEIGHT_FACTOR}
+            entry.setdefault("notes", []).append("weed_like — вес снижен")
 
         kept.append(entry)
 

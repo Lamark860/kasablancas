@@ -75,15 +75,17 @@ export interface RecommendOutput {
   active_oracles: string[]
   pool: PoolEntry[]
   filters_applied: boolean
+  frost: boolean
+  hide_weeds: boolean
   excluded: Exclusion[]
 }
 
 export interface OracleInfo {
   id: string
-  name: string
+  name_ru: string
   description?: string | null
   weight: number
-  active: boolean
+  active: boolean | number
   implemented: boolean
 }
 
@@ -153,9 +155,14 @@ export const useApi = () => {
     deletePerson: (id: number) => $fetch(url(`/persons/${id}`), { method: 'DELETE' }),
 
     // recommend
-    recommend: (personId: number, applyFilters = true, disabledOracles: string[] = []) => {
-      const q = new URLSearchParams({ apply_filters: String(applyFilters) })
-      if (disabledOracles.length) q.set('disabled', disabledOracles.join(','))
+    recommend: (
+      personId: number,
+      opts: { frost?: boolean; hideWeeds?: boolean; disabledOracles?: string[] } = {},
+    ) => {
+      const q = new URLSearchParams()
+      if (opts.frost !== undefined) q.set('frost', String(opts.frost))
+      if (opts.hideWeeds !== undefined) q.set('hide_weeds', String(opts.hideWeeds))
+      if (opts.disabledOracles?.length) q.set('disabled', opts.disabledOracles.join(','))
       return $fetch<RecommendOutput>(url(`/recommend/?${q}`), {
         method: 'POST',
         body: { person_id: personId },

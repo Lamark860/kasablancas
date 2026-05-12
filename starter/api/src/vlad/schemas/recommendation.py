@@ -54,7 +54,9 @@ class RecommendInput(BaseModel):
 class RecommendOutput(BaseModel):
     active_oracles: list[str]
     pool: list[PoolEntry]
-    filters_applied: bool
+    filters_applied: bool   # backward-compat: True если хотя бы один из frost/hide_weeds on
+    frost: bool = True
+    hide_weeds: bool = True
     excluded: list[Exclusion] = []
 
     model_config = ConfigDict(from_attributes=True)
