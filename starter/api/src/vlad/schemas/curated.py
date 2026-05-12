@@ -67,6 +67,7 @@ class RecommendationOut(BaseModel):
     expert_notes: str | None = None
 
     share_token: str | None = None
+    is_final: bool = False
 
     created_at: datetime
     updated_at: datetime
@@ -87,6 +88,7 @@ class RecommendationSummary(BaseModel):
     title_plant_slug: str | None = None
     curated_pool: list[CuratedItem] | None = None
     expert_notes: str | None = None
+    is_final: bool = False
     created_at: datetime
     updated_at: datetime
 

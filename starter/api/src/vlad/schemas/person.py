@@ -51,4 +51,10 @@ class PersonOut(PersonBase):
     created_at: datetime
     updated_at: datetime
 
+    # Деривативные поля для UI реестра — вычисляются в роуте list_persons.
+    # Не сохраняются в БД, не участвуют в create/update.
+    status: Literal["intake", "pool", "leaf"] | None = None
+    last_touch_at: datetime | None = None
+    has_share_token: bool = False
+
     model_config = ConfigDict(from_attributes=True)

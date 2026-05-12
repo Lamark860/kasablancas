@@ -35,10 +35,16 @@ export interface PersonInput {
   notes?: string | null
 }
 
+export type PersonStatus = 'intake' | 'pool' | 'leaf'
+
 export interface Person extends PersonInput {
   id: number
   created_at: string
   updated_at: string
+  // Деривативные поля от бэка для UI реестра (см. routes/persons.py list_persons).
+  status?: PersonStatus | null
+  last_touch_at?: string | null
+  has_share_token?: boolean
 }
 
 export interface OracleSource {
@@ -104,6 +110,7 @@ export interface RecommendationOut {
   title_plant_slug: string | null
   expert_notes: string | null
   share_token: string | null
+  is_final: boolean
   created_at: string
   updated_at: string
 }
@@ -121,6 +128,7 @@ export interface RecommendationSummary {
   title_plant_slug: string | null
   curated_pool: CuratedItem[] | null
   expert_notes: string | null
+  is_final: boolean
   created_at: string
   updated_at: string
 }
@@ -175,6 +183,12 @@ export const useApi = () => {
     // публичный лист по shareable-токену (A8)
     getLeaf: (token: string) =>
       $fetch<RecommendationOut>(url(`/leaf/${token}`)),
+
+    // пометить версию подбора финальной (E3) — снимает флаг с предыдущих
+    finalizeRecommendation: (personId: number, recId: number) =>
+      $fetch<RecommendationOut>(url(`/persons/${personId}/recommendations/${recId}/finalize`), {
+        method: 'POST',
+      }),
 
     // геокодинг места рождения (F1)
     searchPlaces: (q: string, limit = 5) =>

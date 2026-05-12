@@ -248,6 +248,11 @@ class Recommendation(TimestampMixin, Base):
     # на роуте GET /leaf/{token} без авторизации.
     share_token: Mapped[str | None] = mapped_column(String(48), unique=True)
 
+    # «Финальная» версия — та, что эксперт официально отдала гостье.
+    # Уникальность на person не enforced на уровне БД (миграция SQLite),
+    # вместо этого `finalize`-endpoint снимает флаг с других версий.
+    is_final: Mapped[bool] = mapped_column(default=False, server_default="0")
+
     person: Mapped["Person"] = relationship(back_populates="recommendations")
 
     __table_args__ = (Index("idx_recommendations_person", "person_id"),)

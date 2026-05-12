@@ -17,7 +17,44 @@ router = APIRouter()
 
 @router.get("/", response_model=list[PersonOut])
 def list_persons(db: Session = Depends(get_db)):
-    return db.scalars(select(Person).order_by(Person.id.desc())).all()
+    """Реестр гостий с производными полями для UI: status, last_touch_at,
+    has_share_token. Сортировка — по last_touch_at (новейшая активность сверху).
+    """
+    persons = db.scalars(select(Person)).all()
+
+    # Подтянем последние рекомендации одним запросом
+    latest_by_person: dict[int, Recommendation] = {}
+    for rec in db.scalars(
+        select(Recommendation).order_by(Recommendation.id.desc())
+    ).all():
+        if rec.person_id not in latest_by_person:
+            latest_by_person[rec.person_id] = rec
+
+    enriched = []
+    for p in persons:
+        latest = latest_by_person.get(p.id)
+        if latest is None:
+            status_val = "intake"
+            last_touch = p.updated_at
+            has_token = False
+        else:
+            has_curated = bool(latest.curated_pool)
+            status_val = "leaf" if has_curated else "pool"
+            last_touch = max(p.updated_at, latest.created_at)
+            has_token = bool(latest.share_token)
+
+        # PersonOut собирается через from_attributes — но extra-полей в ORM
+        # нет. Передаём словарь напрямую.
+        out = PersonOut.model_validate(p).model_copy(update={
+            "status": status_val,
+            "last_touch_at": last_touch,
+            "has_share_token": has_token,
+        })
+        enriched.append(out)
+
+    # Новейшая активность сверху
+    enriched.sort(key=lambda x: x.last_touch_at or x.created_at, reverse=True)
+    return enriched
 
 
 @router.post("/", response_model=PersonOut, status_code=status.HTTP_201_CREATED)
@@ -161,4 +198,38 @@ def get_recommendation_version(
     rec = db.get(Recommendation, rec_id)
     if rec is None or rec.person_id != person_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "recommendation version not found")
+    return rec
+
+
+@router.post(
+    "/{person_id}/recommendations/{rec_id}/finalize",
+    response_model=RecommendationOut,
+)
+def finalize_recommendation_version(
+    person_id: int,
+    rec_id: int,
+    db: Session = Depends(get_db),
+):
+    """Пометить эту версию как финальную, снять флаг с предыдущих.
+
+    Идемпотентно: если уже финальная — просто возвращает её. Снимать
+    финальность отдельным эндпоинтом не нужно: установка финальности на
+    любой другой версии автоматически снимает её с этой.
+    """
+    rec = db.get(Recommendation, rec_id)
+    if rec is None or rec.person_id != person_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "recommendation version not found")
+    # Снимаем со всех остальных
+    others = db.scalars(
+        select(Recommendation).where(
+            Recommendation.person_id == person_id,
+            Recommendation.id != rec_id,
+            Recommendation.is_final.is_(True),
+        )
+    ).all()
+    for o in others:
+        o.is_final = False
+    rec.is_final = True
+    db.commit()
+    db.refresh(rec)
     return rec

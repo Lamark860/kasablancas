@@ -122,7 +122,7 @@ const zoneOpts = [
   { v: 8, l: 'зона 8 · Кубань' },
 ]
 
-async function submit() {
+async function submit(mode: 'pool' | 'draft' = 'pool') {
   errorMsg.value = null
 
   if (placeNeedsResolution.value) {
@@ -147,7 +147,9 @@ async function submit() {
       birth_tz:       sel ? sel.tz  : null,
     }
     const created = await api.createPerson(payload)
-    await router.push(`/expert/${created.id}`)
+    // 'draft' → возврат к реестру, эксперт продолжит позже.
+    // 'pool'  → сразу к экспертному пулу.
+    await router.push(mode === 'draft' ? '/' : `/expert/${created.id}`)
   } catch (e: any) {
     errorMsg.value = e?.data?.detail
       ? JSON.stringify(e.data.detail)
@@ -168,7 +170,7 @@ async function submit() {
           <div class="masthead__sub">заполняется экспертом, прежде чем сводить источники</div>
         </header>
 
-        <form class="form" @submit.prevent="submit">
+        <form class="form" @submit.prevent="submit('pool')">
 
           <div class="row">
             <div class="field">
@@ -193,6 +195,7 @@ async function submit() {
             <div class="field">
               <div class="v-field-label">Час</div>
               <input v-model="form.birth_time" class="v-input" type="time" />
+              <div class="field__hint">если известно — иначе берётся 12:00, асцендент тогда не считается</div>
             </div>
             <div class="field place">
               <div class="v-field-label">
@@ -262,17 +265,41 @@ async function submit() {
           <div class="row">
             <div class="field">
               <div class="v-field-label">Пол</div>
-              <select v-model="form.gender" class="v-select">
-                <option :value="null">—</option>
-                <option v-for="g in genders" :key="g.value" :value="g.value">{{ g.label }}</option>
-              </select>
+              <div class="gender-row">
+                <label v-for="g in genders" :key="g.value" class="gender-opt">
+                  <input
+                    type="radio"
+                    name="gender"
+                    :value="g.value"
+                    v-model="form.gender"
+                  />
+                  <span>{{ g.label }}</span>
+                </label>
+                <button
+                  type="button"
+                  class="gender-clear"
+                  :disabled="form.gender === null"
+                  @click="form.gender = null"
+                  title="сбросить выбор"
+                >×</button>
+              </div>
             </div>
             <div class="field">
               <div class="v-field-label">Взгляд</div>
-              <select v-model="form.eye_color" class="v-select">
-                <option :value="null">—</option>
-                <option v-for="c in eyeColors" :key="c.value" :value="c.value">{{ c.label }}</option>
-              </select>
+              <div class="swatches">
+                <button
+                  v-for="c in eyeColors"
+                  :key="c.value"
+                  type="button"
+                  class="swatch"
+                  :class="[`swatch--${c.value}`, { 'swatch--active': form.eye_color === c.value }]"
+                  :title="c.label"
+                  @click="form.eye_color = form.eye_color === c.value ? null : c.value"
+                >
+                  <span class="swatch__dot" aria-hidden="true"></span>
+                  <span class="swatch__label">{{ c.label }}</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -315,6 +342,15 @@ async function submit() {
 
           <footer class="form__footer">
             <NuxtLink to="/" class="v-btn--link">← к реестру</NuxtLink>
+            <button
+              type="button"
+              class="v-btn--link form__draft"
+              :disabled="submitting || !form.first_name || !form.birth_date"
+              title="сохранить и вернуться в реестр — продолжишь позже"
+              @click="submit('draft')"
+            >
+              сохранить черновик
+            </button>
             <button type="submit" class="v-btn" :disabled="submitting">
               {{ submitting ? 'сводим…' : '✦ свести источники ✦' }}
             </button>
@@ -353,6 +389,109 @@ async function submit() {
 }
 
 .form { margin-top: 8px; }
+
+.field__hint {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 11px;
+  color: var(--ink-faded);
+  margin-top: 4px;
+}
+
+/* — Радио для пола — */
+.gender-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-top: 4px;
+}
+.gender-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--serif);
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+}
+.gender-opt input { cursor: inherit; }
+.gender-clear {
+  margin-left: auto;
+  font-family: var(--sans);
+  font-size: 14px;
+  color: var(--ink-faded);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  line-height: 1;
+}
+.gender-clear:hover { color: var(--terra); }
+.gender-clear:disabled { opacity: 0.25; cursor: not-allowed; }
+
+/* — Свотчи для цвета глаз — */
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 4px;
+}
+.swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px 5px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  cursor: pointer;
+  font-family: var(--serif);
+  font-size: 11px;
+  font-style: italic;
+  color: var(--ink-faded);
+}
+.swatch:hover { background: var(--paper-deep); }
+.swatch--active {
+  border-color: var(--terra);
+  color: var(--ink);
+  background: var(--paper-deep);
+}
+.swatch__dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--ink);
+  box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.4);
+}
+.swatch__label { white-space: nowrap; }
+
+.swatch--blue  .swatch__dot { background: #5d8aa8; }
+.swatch--grey  .swatch__dot { background: #8a8a8a; }
+.swatch--green .swatch__dot { background: #6b8e5a; }
+.swatch--hazel .swatch__dot { background: #a87d4a; }
+.swatch--brown .swatch__dot { background: #6b4423; }
+.swatch--amber .swatch__dot { background: #c08552; }
+.swatch--dark  .swatch__dot { background: #2d2218; }
+
+.form__draft {
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-faded);
+  background: transparent;
+  border: 1px dashed var(--rule);
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.form__draft:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+.form__draft:disabled { opacity: 0.4; cursor: not-allowed; }
+
 
 .row {
   display: grid;

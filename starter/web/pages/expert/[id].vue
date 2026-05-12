@@ -80,6 +80,18 @@ async function loadVersion(rec: RecommendationSummary) {
   }
 }
 
+async function finalizeVersion(rec: RecommendationSummary) {
+  if (!window.confirm(
+    `Пометить версию от ${formatDate(rec.created_at)} как финальную? Флаг снимется с предыдущих.`
+  )) return
+  try {
+    await api.finalizeRecommendation(personId.value, rec.id)
+    await loadHistory()
+  } catch (e: any) {
+    saveError.value = `не удалось финализировать #${rec.id}: ${e?.message || 'ошибка'}`
+  }
+}
+
 // curated: Map<plant_slug, expert_note>. Наличие ключа означает «в избранном».
 function _initCurated(items: typeof saved.value extends infer T ? T extends { curated_pool: infer P } ? P : never : never): Map<string, string> {
   const m = new Map<string, string>()
@@ -192,6 +204,33 @@ function frostReasonFor(slug: string): string | null {
 function isNew(slug: string): boolean {
   // «новая» = была бы скрыта фильтром, но фильтр сейчас снят
   return !!result.value && !result.value.filters_applied && lastExcludedBySlug.value.has(slug)
+}
+
+// — Diff между текущей версией и каждой исторической (E1).
+//   Считаем относительно текущего local state (curated + titleSlug),
+//   а не относительно «последней сохранённой» — так эксперт видит,
+//   что добавить/убрать в собираемой версии, если форкнет старую.
+interface VersionDiff {
+  added: string[]      // есть в исторической, нет в текущей
+  removed: string[]    // есть в текущей, нет в исторической
+  titleChanged: { from: string | null; to: string | null } | null
+  unchanged: boolean
+}
+
+function diffAgainstCurrent(rec: RecommendationSummary): VersionDiff {
+  const histSlugs = new Set((rec.curated_pool || []).map(it => it.plant_slug))
+  const curSlugs = new Set(curated.value.keys())
+  const added = [...histSlugs].filter(s => !curSlugs.has(s))
+  const removed = [...curSlugs].filter(s => !histSlugs.has(s))
+  const titleDiff = rec.title_plant_slug !== titleSlug.value
+    ? { from: titleSlug.value, to: rec.title_plant_slug }
+    : null
+  return {
+    added,
+    removed,
+    titleChanged: titleDiff,
+    unchanged: added.length === 0 && removed.length === 0 && titleDiff === null,
+  }
 }
 </script>
 
@@ -364,16 +403,60 @@ function isNew(slug: string): boolean {
                   <div class="history__meta">
                     <span class="history__date">{{ formatDate(h.created_at) }}</span>
                     <span v-if="i === 0" class="history__badge">текущая</span>
+                    <span
+                      v-if="h.is_final"
+                      class="history__badge history__badge--final"
+                      title="версия отдана гостье"
+                    >finalis</span>
                   </div>
                   <div class="history__summary">
                     <span v-if="h.title_plant_slug">главное: <em>{{ h.title_plant_slug }}</em> · </span>
                     <span>{{ h.curated_pool?.length ?? 0 }} в избр.</span>
                   </div>
-                  <button
-                    type="button"
-                    class="v-btn--link history__load"
-                    @click="loadVersion(h)"
-                  >загрузить</button>
+
+                  <div v-if="i !== 0" class="history__diff">
+                    <template v-if="diffAgainstCurrent(h).unchanged">
+                      <span class="history__diff-empty">≡ совпадает с текущей</span>
+                    </template>
+                    <template v-else>
+                      <span
+                        v-for="slug in diffAgainstCurrent(h).added"
+                        :key="`a-${slug}`"
+                        class="history__diff-add"
+                        :title="`появится в избранном при форке`"
+                      >+ {{ slug }}</span>
+                      <span
+                        v-for="slug in diffAgainstCurrent(h).removed"
+                        :key="`r-${slug}`"
+                        class="history__diff-rm"
+                        :title="`будет снято с избранного при форке`"
+                      >− {{ slug }}</span>
+                      <span
+                        v-if="diffAgainstCurrent(h).titleChanged"
+                        class="history__diff-title"
+                        :title="`главное дерево сменится`"
+                      >
+                        →
+                        <em>{{ diffAgainstCurrent(h).titleChanged.to || '—' }}</em>
+                      </span>
+                    </template>
+                  </div>
+
+                  <div class="history__buttons">
+                    <button
+                      type="button"
+                      class="v-btn--link history__load"
+                      title="подгрузить эту версию в форму — кнопка «сохранить» создаст новую версию из этого набора"
+                      @click="loadVersion(h)"
+                    >↘ форкнуть</button>
+                    <button
+                      v-if="!h.is_final"
+                      type="button"
+                      class="v-btn--link history__finalize"
+                      title="пометить финальной — той, что отдана гостье"
+                      @click="finalizeVersion(h)"
+                    >✦ финальная</button>
+                  </div>
                 </li>
               </ul>
             </div>
@@ -803,6 +886,30 @@ function isNew(slug: string): boolean {
   text-transform: uppercase;
   color: var(--terra);
 }
+.history__badge--final {
+  margin-left: 6px;
+  padding: 1px 6px;
+  background: var(--terra);
+  color: var(--paper);
+}
+.history__buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+.history__finalize {
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold, #b08d44);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.history__finalize:hover { color: var(--terra); }
 .history__summary {
   font-family: var(--serif);
   font-style: italic;
@@ -824,6 +931,33 @@ function isNew(slug: string): boolean {
   padding: 2px 0;
 }
 .history__load:hover { color: var(--ink); }
+
+.history__diff {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin-top: 4px;
+  font-family: var(--sans);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+.history__diff-add { color: #2da44e; }
+.history__diff-rm  { color: #d4380d; text-decoration: line-through; text-decoration-color: rgba(212,56,13,0.5); }
+.history__diff-title {
+  color: var(--terra);
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 11px;
+  letter-spacing: 0;
+}
+.history__diff-title em { font-style: italic; color: var(--ink); }
+.history__diff-empty {
+  color: var(--ink-faded);
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 11px;
+  letter-spacing: 0;
+}
 
 .excluded__row { margin-bottom: 8px; }
 .excluded__row:last-child { margin-bottom: 0; }
