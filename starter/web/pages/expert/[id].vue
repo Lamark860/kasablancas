@@ -427,7 +427,7 @@ const oracleLatin: Record<string, string> = {
               </section>
 
               <footer class="main__footer">
-                <NuxtLink to="/" class="v-btn--link">← к реестру</NuxtLink>
+                <NuxtLink to="/registry" class="v-btn--link">← к реестру</NuxtLink>
                 <button
                   type="button"
                   class="v-btn--link main__footer-version"

@@ -442,7 +442,7 @@ async function submit(mode: 'pool' | 'draft' = 'pool') {
           <div v-if="errorMsg" class="error">{{ errorMsg }}</div>
 
           <footer class="form__footer">
-            <NuxtLink to="/" class="v-btn--link form__back">← к&nbsp;реестру</NuxtLink>
+            <NuxtLink to="/registry" class="v-btn--link form__back">← к&nbsp;реестру</NuxtLink>
             <div class="form__actions">
               <button
                 type="button"

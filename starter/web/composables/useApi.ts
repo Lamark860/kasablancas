@@ -129,6 +129,37 @@ export interface GeocodeCandidate {
   label: string | null
 }
 
+export interface LeadCompanion {
+  slug: string
+  name_ru: string | null
+  match_count: number | null
+}
+
+export interface LeadCreate {
+  contact: string
+  want_consultation: boolean
+  first_name: string
+  birth_date: string
+  birth_place?: string | null
+  birth_lat?: number | null
+  birth_lon?: number | null
+  birth_tz?: string | null
+  eye_color?: EyeColor | null
+  main_plant_slug?: string | null
+  main_plant_name?: string | null
+  companions?: LeadCompanion[] | null
+  city?: string | null
+  source?: Record<string, any> | null
+}
+
+export interface LeadOut extends LeadCreate {
+  id: number
+  status: 'new' | 'contacted' | 'won' | 'lost'
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface RecommendationSummary {
   id: number
   person_id: number
@@ -174,6 +205,27 @@ export const useApi = () => {
         body: { person_id: personId },
       })
     },
+
+    // recommend без записи в БД — для публичной анкеты (этап «воронка лидов»):
+    // фронт собирает анкету анонимно и сразу получает пул, пишем в БД только
+    // когда юзер ставит галку «хочу консультацию» (см. /leads).
+    recommendInline: (
+      person: PersonInput,
+      opts: { frost?: boolean; hideWeeds?: boolean; disabledOracles?: string[] } = {},
+    ) => {
+      const q = new URLSearchParams()
+      if (opts.frost !== undefined) q.set('frost', String(opts.frost))
+      if (opts.hideWeeds !== undefined) q.set('hide_weeds', String(opts.hideWeeds))
+      if (opts.disabledOracles?.length) q.set('disabled', opts.disabledOracles.join(','))
+      return $fetch<RecommendOutput>(url(`/recommend/?${q}`), {
+        method: 'POST',
+        body: { person: person },
+      })
+    },
+
+    // leads (воронка)
+    createLead: (payload: LeadCreate) =>
+      $fetch<LeadOut>(url('/leads/'), { method: 'POST', body: payload }),
 
     // oracles
     listOracles: () => $fetch<OracleInfo[]>(url('/oracles/')),

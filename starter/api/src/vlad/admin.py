@@ -16,6 +16,7 @@ from vlad.db import SessionLocal
 from vlad.dump_seed import SEED_DIR, dump_all
 from vlad.matcher_describe import describe_matcher
 from vlad.models import (
+    Lead,
     NatalChart,
     Oracle,
     OracleEntry,
@@ -395,6 +396,33 @@ class NatalChartAdmin(ModelView, model=NatalChart):
     ]
 
 
+class LeadAdmin(ModelView, model=Lead):
+    name = "Лид"
+    name_plural = "Лиды"
+    icon = "fa-solid fa-envelope"
+    column_list = [
+        Lead.id,
+        Lead.created_at,
+        Lead.first_name,
+        Lead.contact,
+        Lead.main_plant_name,
+        Lead.city,
+        Lead.status,
+        Lead.want_consultation,
+    ]
+    column_searchable_list = [Lead.first_name, Lead.contact, Lead.main_plant_name, Lead.city]
+    column_sortable_list = [Lead.id, Lead.created_at, Lead.status]
+    column_default_sort = [(Lead.created_at, True)]  # сверху свежие
+    form_args = {
+        "status": {"description": "new — пришёл; contacted — связались; won — продали консультацию; lost — не дошли."},
+        "notes": {"description": "Свободные заметки эксперта по этому лиду — что обсудили, что договорились."},
+        "contact": {"description": "Телеграм-юзернейм или телефон, как клиентка прислала."},
+        "main_plant_name": {"description": "Денормализованное имя главного дерева — как клиентка увидела на странице результата."},
+        "companions": {"description": "Снимок сопровождающих растений: список {slug, name_ru, match_count}."},
+    }
+    form_excluded_columns = [Lead.created_at, Lead.updated_at]
+
+
 def _render_dump_page(rows: list[tuple[str, int]] | None, error: str | None) -> str:
     """Простая standalone-страница для выгрузки JSON. Без sqladmin layout (не критично — операция редкая)."""
     rows_html = ""
@@ -647,6 +675,7 @@ def setup_admin(app, engine) -> Admin:
     admin.add_view(OracleEntryAdmin)
     admin.add_view(RecommendationAdmin)
     admin.add_view(NatalChartAdmin)
+    admin.add_view(LeadAdmin)
     admin.add_base_view(SeedDumpView)
     admin.add_base_view(CsvImportView)
     return admin

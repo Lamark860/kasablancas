@@ -283,6 +283,48 @@ class NatalChart(Base):
     person: Mapped["Person"] = relationship(back_populates="natal_chart")
 
 
+class Lead(TimestampMixin, Base):
+    """Публичный лид: гостья заполнила анкету на `/`, получила результат,
+    поставила галку «хочу консультацию» и оставила контакт. Эксперт работает
+    с этой таблицей в админке. Записи отдельные от Person — Person пока остаётся
+    «полным досье эксперта» с natal chart, а Lead — лёгким захватом из воронки.
+    """
+
+    __tablename__ = "leads"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+    contact: Mapped[str] = mapped_column(String(128), nullable=False)
+    want_consultation: Mapped[bool] = mapped_column(default=True, server_default="1")
+
+    first_name: Mapped[str] = mapped_column(String(64), nullable=False)
+    birth_date: Mapped[str] = mapped_column(String(10), nullable=False)
+    birth_place: Mapped[str | None] = mapped_column(String(128))
+    birth_lat: Mapped[float | None] = mapped_column(Float)
+    birth_lon: Mapped[float | None] = mapped_column(Float)
+    birth_tz: Mapped[str | None] = mapped_column(String(64))
+    eye_color: Mapped[str | None] = mapped_column(String(16))
+
+    main_plant_slug: Mapped[str | None] = mapped_column(String(64))
+    main_plant_name: Mapped[str | None] = mapped_column(String(128))
+    companions: Mapped[list | None] = mapped_column(JSON)  # [{slug, name_ru, match_count}, ...]
+
+    city: Mapped[str | None] = mapped_column(String(64))
+    source: Mapped[dict | None] = mapped_column(JSON)
+
+    status: Mapped[str] = mapped_column(String(16), default="new", server_default="new")
+    notes: Mapped[str | None] = mapped_column(Text)
+
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('new','contacted','won','lost')",
+            name="ck_leads_status",
+        ),
+        Index("idx_leads_status", "status"),
+        Index("idx_leads_created_at", "created_at"),
+    )
+
+
 __all__ = [
     "Person",
     "Plant",
@@ -290,4 +332,5 @@ __all__ = [
     "OracleEntry",
     "Recommendation",
     "NatalChart",
+    "Lead",
 ]
